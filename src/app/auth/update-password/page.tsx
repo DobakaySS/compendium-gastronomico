@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { UpdatePasswordForm } from "@/components/auth/update-password-form"
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form"
+import { AuthShell } from "@/components/auth/auth-shell"
 
 export default async function UpdatePasswordPage() {
   const supabase = await createClient()
@@ -10,9 +11,19 @@ export default async function UpdatePasswordPage() {
 
   const hasRecoverySession = user !== null
 
-  return (
-    <main className="flex flex-1 items-center justify-center px-4 py-16">
-      {hasRecoverySession ? <UpdatePasswordForm /> : <ForgotPasswordForm />}
-    </main>
+  return hasRecoverySession ? (
+    <AuthShell
+      title="Definir nova senha"
+      subtitle="Informe sua nova senha para continuar."
+    >
+      <UpdatePasswordForm />
+    </AuthShell>
+  ) : (
+    <AuthShell
+      title="Recuperar senha"
+      subtitle="Enviaremos um link para você redefinir sua senha."
+    >
+      <ForgotPasswordForm />
+    </AuthShell>
   )
 }

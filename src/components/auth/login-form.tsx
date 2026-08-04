@@ -6,14 +6,6 @@ import { login, type AuthState } from "@/app/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
   Field,
   FieldLabel,
   FieldContent,
@@ -27,64 +19,56 @@ export function LoginForm({ next }: { next?: string }) {
   )
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Entrar</CardTitle>
-        <CardDescription>
-          Acesse sua conta no Compendium Gastronômico.
-        </CardDescription>
-      </CardHeader>
-      <form action={formAction}>
-        <CardContent className="flex flex-col gap-4">
-          <input type="hidden" name="next" value={next ?? "/dashboard"} />
-          <Field orientation="vertical">
-            <FieldLabel htmlFor="email">E-mail</FieldLabel>
-            <FieldContent>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="voce@exemplo.com"
-                required
-              />
-              <FieldError errors={state?.errors?.email?.map((m) => ({ message: m }))} />
-            </FieldContent>
-          </Field>
-          <Field orientation="vertical">
-            <FieldLabel htmlFor="password">Senha</FieldLabel>
-            <FieldContent>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                required
-              />
-              <FieldError
-                errors={state?.errors?.password?.map((m) => ({ message: m }))}
-              />
-            </FieldContent>
-          </Field>
-          {state?.message && (
-            <p className="text-sm text-muted-foreground">{state.message}</p>
-          )}
-        </CardContent>
-        <CardFooter className="flex flex-col items-stretch gap-3">
-          <Button type="submit" disabled={pending}>
-            {pending ? "Entrando..." : "Entrar"}
-          </Button>
-          <div className="flex items-center justify-between text-sm">
-            <Link href="/signup" className="text-muted-foreground underline">
-              Criar conta
-            </Link>
-            <Link href="/auth/update-password" className="text-muted-foreground underline">
-              Esqueci minha senha
-            </Link>
-          </div>
-        </CardFooter>
-      </form>
-    </Card>
+    <form action={formAction} className="flex flex-col gap-4">
+      <input type="hidden" name="next" value={next ?? "/"} />
+      <Field orientation="vertical">
+        <FieldLabel htmlFor="email">E-mail</FieldLabel>
+        <FieldContent>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="voce@exemplo.com"
+            required
+          />
+          <FieldError errors={state?.errors?.email?.map((m) => ({ message: m }))} />
+        </FieldContent>
+      </Field>
+      <Field orientation="vertical">
+        <FieldLabel htmlFor="password">Senha</FieldLabel>
+        <FieldContent>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            required
+          />
+          <FieldError
+            errors={state?.errors?.password?.map((m) => ({ message: m }))}
+          />
+        </FieldContent>
+      </Field>
+      {state?.message && (
+        <p className="text-sm text-zinc-400">{state.message}</p>
+      )}
+      <Button
+        type="submit"
+        disabled={pending}
+        className="mt-2 w-full rounded-full"
+      >
+        {pending ? "Entrando..." : "Entrar"}
+      </Button>
+      <div className="flex items-center justify-between text-sm">
+        <Link href="/signup" className="text-zinc-400 underline">
+          Criar conta
+        </Link>
+        <Link href="/auth/update-password" className="text-zinc-400 underline">
+          Esqueci minha senha
+        </Link>
+      </div>
+    </form>
   )
 }

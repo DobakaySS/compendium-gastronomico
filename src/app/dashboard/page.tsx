@@ -1,8 +1,25 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
-import { Button } from "@/components/ui/button"
-import { LogoutButton } from "@/components/auth/logout-button"
+import { AppHeader } from "@/components/layout/app-header"
+
+const actions = [
+  {
+    href: "/recipes/new",
+    label: "Nova receita",
+    description: "Crie uma receita com passos, ingredientes e autores.",
+  },
+  {
+    href: "/ingredients/new",
+    label: "Novo ingrediente",
+    description: "Adicione um alimento ao catálogo com macros por 100g.",
+  },
+  {
+    href: "/authors/new",
+    label: "Novo autor",
+    description: "Cadastre um autor para as receitas do compêndium.",
+  },
+]
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -14,44 +31,45 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-8 px-4 py-12">
-      <div className="flex w-full items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Bem-vindo(a), {user.email ?? "cozinheiro(a)"}!
-          </p>
-        </div>
-        <LogoutButton />
-      </div>
+  const name =
+    user.user_metadata?.name ?? user.email?.split("@")[0] ?? "cozinheiro(a)"
 
-      <nav className="grid w-full gap-3">
-        <Button
-          size="lg"
-          className="w-full justify-start"
-          nativeButton={false}
-          render={<Link href="/recipes/new" />}
-        >
-          Nova receita
-        </Button>
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href="/ingredients/new" />}
-          >
-            Novo ingrediente
-          </Button>
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href="/authors/new" />}
-          >
-            Novo autor
-          </Button>
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <AppHeader />
+
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
+        <span className="text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
+          Estúdio
+        </span>
+        <h1 className="mt-2 font-heading text-3xl text-zinc-50">
+          Olá, {name}.
+        </h1>
+        <p className="mt-2 max-w-md text-sm text-zinc-400">
+          A partir daqui você dá forma ao compêndium — receitas, ingredientes e
+          autores.
+        </p>
+
+        <div className="mt-10 grid gap-3">
+          {actions.map((a) => (
+            <Link
+              key={a.href}
+              href={a.href}
+              className="group flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-5 py-5 transition-colors hover:border-zinc-600 hover:bg-zinc-900"
+            >
+              <div>
+                <p className="font-heading text-lg text-zinc-100">
+                  {a.label}
+                </p>
+                <p className="mt-0.5 text-sm text-zinc-500">{a.description}</p>
+              </div>
+              <span className="text-zinc-600 transition-colors group-hover:text-zinc-300">
+                →
+              </span>
+            </Link>
+          ))}
         </div>
-      </nav>
-    </main>
+      </main>
+    </div>
   )
 }

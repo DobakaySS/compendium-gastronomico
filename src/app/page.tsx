@@ -1,29 +1,118 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
+import { Button } from "@/components/ui/button"
+import { AppHeader } from "@/components/layout/app-header"
+import { RecipeCard } from "@/components/recipes/recipe-card"
 
-export default function Home() {
+export const revalidate = 0
+
+export default async function Home() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return (
+      <main className="relative flex min-h-dvh flex-col overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,#33415540_0%,transparent_60%)]" />
+        <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center gap-8 px-6 text-center">
+          <span className="text-[0.7rem] tracking-[0.4em] uppercase text-zinc-500">
+            Smart Recipe Collection
+          </span>
+          <h1 className="font-heading text-5xl leading-[1.05] text-zinc-50 [text-wrap:balance] sm:text-6xl">
+            Compendium <br /> Gastronômico
+          </h1>
+          <p className="max-w-md text-sm leading-relaxed text-zinc-400">
+            Receitas com porções dinâmicas, macros precisos e evolução
+            colaborativa. Sua coleção culinária, elevada.
+          </p>
+          <div className="flex items-center gap-3">
+            <Button
+              size="lg"
+              nativeButton={false}
+              render={<Link href="/login" />}
+              className="rounded-full px-7"
+            >
+              Entrar
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              nativeButton={false}
+              render={<Link href="/signup" />}
+              className="rounded-full px-7"
+            >
+              Criar conta
+            </Button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  const { data: recipes, error } = await supabase
+    .from("recipes")
+    .select("id, title, image_url, base_servings, prep_time_minutes, created_at")
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-16 text-center">
-      <h1 className="max-w-2xl text-4xl font-semibold tracking-tight">
-        Compendium Gastronômico
-      </h1>
-      <p className="max-w-md text-lg text-muted-foreground">
-        Sua coleção inteligente de receitas: porções dinâmicas, macros e
-        custos.
-      </p>
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Button size="lg" nativeButton={false} render={<Link href="/login" />}>
-          Entrar
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          nativeButton={false}
-          render={<Link href="/signup" />}
-        >
-          Criar conta
-        </Button>
-      </div>
-    </main>
-  );
+    <div className="flex min-h-dvh flex-col">
+      <AppHeader />
+
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:py-12">
+        <div className="mb-8 flex flex-col gap-2">
+          <span className="text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
+            Coleção
+          </span>
+          <div className="flex items-end justify-between gap-4">
+            <h1 className="font-heading text-3xl text-zinc-50 sm:text-4xl">
+              Suas receitas
+            </h1>
+            <Link
+              href="/recipes/new"
+              className="mb-1 shrink-0 rounded-full border border-zinc-700 px-4 py-2 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:bg-zinc-800"
+            >
+              + Nova
+            </Link>
+          </div>
+        </div>
+
+        {recipes.length === 0 ? (
+          <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-zinc-800 px-6 py-20 text-center">
+            <h2 className="font-heading text-2xl text-zinc-200">
+              Sua coleção está em branco
+            </h2>
+            <p className="max-w-sm text-sm text-zinc-500">
+              Registre sua primeira receita para começar a construir o
+              compêndium.
+            </p>
+            <Button
+              size="lg"
+              nativeButton={false}
+              render={<Link href="/recipes/new" />}
+              className="rounded-full px-7"
+            >
+              Criar receita
+            </Button>
+          </div>
+        ) : (
+          <>
+            <p className="mb-4 text-[0.7rem] tracking-[0.3em] uppercase text-zinc-500">
+              Recentes
+            </p>
+            <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4">
+              {recipes.map((recipe) => (
+                <RecipeCard key={recipe.id} recipe={recipe} />
+              ))}
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  )
 }
