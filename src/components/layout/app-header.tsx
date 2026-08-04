@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { canWrite, canAdmin, userRole } from "@/lib/roles"
 import { LogoutButton } from "@/components/auth/logout-button"
 import { LoginLink } from "@/components/auth/login-link"
+import { CitySelector } from "@/components/layout/city-selector"
 
 export async function AppHeader() {
   const supabase = await createClient()
@@ -30,6 +31,8 @@ export async function AppHeader() {
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-2">
+          <CitySelector />
+
           <Link
             href="/"
             className="rounded-full px-3 py-1.5 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:text-zinc-100"

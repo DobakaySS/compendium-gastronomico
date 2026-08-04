@@ -3,6 +3,8 @@ import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
+import { CityProvider } from "@/components/providers/city-provider";
+import { getCityFromCookies } from "@/lib/get-city";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -41,14 +43,16 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const initialCity = await getCityFromCookies()
+
   return (
     <html
       lang="pt-BR"
       className={`${inter.variable} ${playfair.variable} dark h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {children}
+        <CityProvider initialCity={initialCity}>{children}</CityProvider>
         <Toaster />
         <ServiceWorkerRegistration />
       </body>

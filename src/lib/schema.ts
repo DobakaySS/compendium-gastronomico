@@ -27,7 +27,7 @@ export type Recipe = {
   base_servings: number
   prep_time_minutes: number
   effort_level: number
-  instructions: string[]
+  instructions: Array<string | { text: string }>
   image_url: string | null
   techniques: string[] | null
   parent_recipe_id: string | null
@@ -41,6 +41,8 @@ export type IngredientPrice = {
   city: string
   price: number
   currency: string
+  reference_amount: number
+  reference_unit: string
   recorded_on: string
 }
 
@@ -129,3 +131,28 @@ export type AuthorFormValues = z.infer<typeof AuthorSchema>
 export type IngredientFormValues = z.infer<typeof IngredientSchema>
 export type RecipeFormValues = z.infer<typeof RecipeSchema>
 export type IngredientLineValues = z.infer<typeof IngredientLineSchema>
+
+// ---------------------------------------------------------------------------
+// Phase 2 — Versioning & calculations
+// ---------------------------------------------------------------------------
+
+export type RecipeVersion = {
+  id: string
+  title: string
+  version_name: string | null
+  image_url: string | null
+  base_servings: number
+  prep_time_minutes: number | null
+  effort_level: number | null
+  instructions: Array<string | { text: string }>
+  created_at: string
+}
+
+export type IngredientWithMacros = Ingredient
+
+export type RecipeIngredientWithMacros = {
+  ingredient_id: string
+  amount_used: number | null
+  unit: string | null
+  ingredients: IngredientWithMacros | IngredientWithMacros[] | null
+}
