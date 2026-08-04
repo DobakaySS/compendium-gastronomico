@@ -19,7 +19,8 @@ export function LoginForm({ next }: { next?: string }) {
   )
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+      <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next ?? "/"} />
       <Field orientation="vertical">
         <FieldLabel htmlFor="email">E-mail</FieldLabel>
@@ -61,28 +62,27 @@ export function LoginForm({ next }: { next?: string }) {
       >
         {pending ? "Entrando..." : "Entrar"}
       </Button>
-      <div className="flex items-center gap-3 py-1">
-        <span className="h-px flex-1 bg-zinc-800" />
-        <span className="text-[0.65rem] tracking-[0.25em] uppercase text-zinc-500">
-          ou
-        </span>
-        <span className="h-px flex-1 bg-zinc-800" />
-      </div>
-      <form action={loginAsVisitor}>
-        <Button
-          type="submit"
-          variant="outline"
-          className="w-full rounded-full"
-        >
-          Entrar como visitante
-        </Button>
-      </form>
-      <p className="text-center text-sm text-zinc-500">
-        Esqueceu sua senha?{" "}
-        <Link href="/auth/update-password" className="underline">
-          Redefinir
-        </Link>
-      </p>
     </form>
+
+    <div className="flex items-center gap-3 py-1">
+      <span className="h-px flex-1 bg-zinc-800" />
+      <span className="text-[0.65rem] tracking-[0.25em] uppercase text-zinc-500">
+        ou
+      </span>
+      <span className="h-px flex-1 bg-zinc-800" />
+    </div>
+
+    <form action={loginAsVisitor}>
+      <Button type="submit" variant="outline" className="w-full rounded-full">
+        Entrar como visitante
+      </Button>
+    </form>
+    <p className="text-center text-sm text-zinc-500">
+      Esqueceu sua senha?{" "}
+      <Link href="/auth/update-password" className="underline">
+        Redefinir
+      </Link>
+    </p>
+    </div>
   )
 }

@@ -22,13 +22,13 @@ export async function createRecipe(
 
   // Reconstrução dos campos dinâmicos a partir do FormData.
   const title = String(formData.get("title") ?? "")
-  const base_servings = String(formData.get("base_servings") ?? "")
-  const prep_time_minutes = String(formData.get("prep_time_minutes") ?? "")
-  const effort_level = String(formData.get("effort_level") ?? "")
+  const base_servings = Number(String(formData.get("base_servings") ?? ""))
+  const prep_time_minutes = Number(String(formData.get("prep_time_minutes") ?? ""))
+  const effort_level = Number(String(formData.get("effort_level") ?? ""))
   const instructions = formData
     .getAll("instructions")
-    .map((v) => String(v))
-    .filter((v) => v.trim() !== "")
+    .map((v) => ({ text: String(v) }))
+    .filter((v) => v.text.trim() !== "")
   const ingredient_ids = formData
     .getAll("ingredient_id")
     .map((v) => String(v))

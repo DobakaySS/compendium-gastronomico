@@ -21,10 +21,10 @@ begin
 
   return query
     select
-      u.id,
-      u.email,
-      coalesce(u.raw_app_meta_data ->> 'role', 'colaborador'),
-      u.created_at
+      u.id::uuid as id,
+      u.email::text as email,
+      coalesce(u.raw_app_meta_data ->> 'role', 'colaborador')::text as role,
+      u.created_at::timestamptz as created_at
     from auth.users u
     order by u.created_at desc;
 end;

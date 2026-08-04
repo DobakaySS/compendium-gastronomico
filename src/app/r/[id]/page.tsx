@@ -36,6 +36,14 @@ export default async function RecipeDetailPage({
     ? recipe.instructions
     : []
 
+  const instructionText = (raw: unknown): string => {
+    if (typeof raw === "string") return raw
+    if (raw && typeof raw === "object" && "text" in raw) {
+      return String((raw as { text: string }).text)
+    }
+    return ""
+  }
+
   const authors = (recipe.recipe_authors as Array<{ authors: unknown }>)
     .map((a) => {
       const rows = Array.isArray(a.authors) ? a.authors : [a.authors]
@@ -138,10 +146,12 @@ export default async function RecipeDetailPage({
               Preparo
             </h2>
             <ol className="space-y-6">
-              {instructions.map((step: string, i: number) => (
+              {instructions.map((step: unknown, i: number) => (
                 <li key={i} className="flex gap-5">
                   <span className="font-heading text-lg text-zinc-500">{i + 1}</span>
-                  <p className="text-sm leading-relaxed text-zinc-200">{step}</p>
+                  <p className="text-sm leading-relaxed text-zinc-200">
+                    {instructionText(step)}
+                  </p>
                 </li>
               ))}
             </ol>

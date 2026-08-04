@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useCallback } from "react"
+import { useActionState, useCallback, startTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -62,7 +62,9 @@ export function IngredientForm() {
       fd.set("protein_per_100g", String(values.protein_per_100g ?? ""))
       fd.set("carbs_per_100g", String(values.carbs_per_100g ?? ""))
       fd.set("fat_per_100g", String(values.fat_per_100g ?? ""))
-      formAction(fd)
+      startTransition(() => {
+        formAction(fd)
+      })
     },
     [formAction]
   )

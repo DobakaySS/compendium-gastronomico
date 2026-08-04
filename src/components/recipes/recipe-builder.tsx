@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useCallback, useEffect, useMemo, useState } from "react"
+import { useActionState, useCallback, useEffect, useMemo, useState, startTransition } from "react"
 import { useForm, useFieldArray, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { RecipeSchema, type RecipeFormValues } from "@/lib/schema"
@@ -34,6 +34,7 @@ import {
   FieldDescription,
 } from "@/components/ui/field"
 import { Combobox, ComboboxMulti } from "@/components/ui/combobox"
+import { NewIngredientDialog } from "@/components/recipes/new-ingredient-dialog"
 import { Separator } from "@/components/ui/separator"
 import { PlusIcon, Trash2Icon } from "lucide-react"
 
@@ -57,6 +58,7 @@ export function RecipeBuilder() {
   const [pendingIngredientId, setPendingIngredientId] = useState("")
   const [pendingAmount, setPendingAmount] = useState("")
   const [pendingUnit, setPendingUnit] = useState<string>(UNITS[0])
+  const [ingredientDialogOpen, setIngredientDialogOpen] = useState(false)
 
   const {
     register,
@@ -87,17 +89,22 @@ export function RecipeBuilder() {
     name: "instructions",
   })
 
-  useEffect(() => {
+  const loadIngredients = useCallback(() => {
     const supabase = createClient()
-    supabase
+    return supabase
       .from("ingredients")
       .select("id, name, default_unit")
       .order("name")
       .then(({ data, error }) => {
         if (!error && data) setIngredients(data)
         setLoadingIngredients(false)
+        return data ?? []
       })
   }, [])
+
+  useEffect(() => {
+    loadIngredients()
+  }, [loadIngredients])
 
   useEffect(() => {
     const supabase = createClient()
@@ -145,6 +152,15 @@ export function RecipeBuilder() {
     if (ingredient?.default_unit) setPendingUnit(ingredient.default_unit)
   }
 
+  const handleIngredientCreated = (id: string) => {
+    setPendingIngredientId(id)
+    setLoadingIngredients(true)
+    loadIngredients().then((rows) => {
+      const ingredient = rows.find((item) => item.id === id)
+      if (ingredient?.default_unit) setPendingUnit(ingredient.default_unit)
+    })
+  }
+
   const onSubmit = useCallback(
     (values: RecipeFormValues) => {
       const fd = new FormData()
@@ -159,7 +175,9 @@ export function RecipeBuilder() {
         fd.append("unit", line.unit)
       })
       values.author_ids.forEach((author_id) => fd.append("author_id", author_id))
-      formAction(fd)
+      startTransition(() => {
+        formAction(fd)
+      })
     },
     [formAction]
   )
@@ -291,14 +309,26 @@ export function RecipeBuilder() {
               <Field orientation="vertical">
                 <FieldLabel>Ingrediente</FieldLabel>
                 <FieldContent>
-                  <Combobox
-                    options={ingredientOptions}
-                    value={pendingIngredientId}
-                    onValueChange={onPendingIngredientChange}
-                    placeholder="Buscar ingrediente..."
-                    emptyText="Nenhum ingrediente encontrado. Cadastre em /ingredients/new"
-                    loading={loadingIngredients}
-                  />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Combobox
+                        options={ingredientOptions}
+                        value={pendingIngredientId}
+                        onValueChange={onPendingIngredientChange}
+                        placeholder="Buscar ingrediente..."
+                        emptyText="Nenhum ingrediente encontrado"
+                        loading={loadingIngredients}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIngredientDialogOpen(true)}
+                      className="shrink-0"
+                    >
+                      <PlusIcon /> Novo
+                    </Button>
+                  </div>
                 </FieldContent>
               </Field>
               <div className="grid grid-cols-2 gap-3">
@@ -406,6 +436,12 @@ export function RecipeBuilder() {
           </p>
         </CardFooter>
       </form>
+
+      <NewIngredientDialog
+        open={ingredientDialogOpen}
+        onOpenChange={setIngredientDialogOpen}
+        onCreated={handleIngredientCreated}
+      />
     </Card>
   )
 }

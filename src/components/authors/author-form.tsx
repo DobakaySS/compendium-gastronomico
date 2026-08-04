@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useCallback } from "react"
+import { useActionState, useCallback, startTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { AuthorSchema, type AuthorFormValues } from "@/lib/schema"
@@ -36,7 +36,9 @@ export function AuthorForm() {
     (values: AuthorFormValues) => {
       const fd = new FormData()
       fd.set("name", values.name)
-      formAction(fd)
+      startTransition(() => {
+        formAction(fd)
+      })
     },
     [formAction]
   )
