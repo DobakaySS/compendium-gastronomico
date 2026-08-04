@@ -1,0 +1,411 @@
+"use client"
+
+import { useActionState, useCallback, useEffect, useMemo, useState } from "react"
+import { useForm, useFieldArray, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { RecipeSchema, type RecipeFormValues } from "@/lib/schema"
+import { createRecipe, type FormState } from "@/app/actions/recipes"
+import { createClient } from "@/lib/supabase/client"
+import type { Ingredient, Author } from "@/lib/schema"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Slider } from "@/components/ui/slider"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Field,
+  FieldLabel,
+  FieldContent,
+  FieldError,
+  FieldDescription,
+} from "@/components/ui/field"
+import { Combobox, ComboboxMulti } from "@/components/ui/combobox"
+import { Separator } from "@/components/ui/separator"
+import { PlusIcon, Trash2Icon } from "lucide-react"
+
+const UNITS = ["g", "kg", "ml", "l", "unidade", "xícara", "colher (sopa)", "colher (chá)"] as const
+
+const EFFORT_LABELS = ["Muito fácil", "Fácil", "Médio", "Difícil", "Muito difícil"]
+
+export function RecipeBuilder() {
+  const [state, formAction, pending] = useActionState<
+    FormState<{ id: string }>,
+    FormData
+  >(createRecipe, null)
+
+  const [ingredients, setIngredients] = useState<
+    Array<Pick<Ingredient, "id" | "name" | "default_unit">>
+  >([])
+  const [authors, setAuthors] = useState<Array<Pick<Author, "id" | "name">>>([])
+  const [loadingIngredients, setLoadingIngredients] = useState(true)
+  const [loadingAuthors, setLoadingAuthors] = useState(true)
+
+  const [pendingIngredientId, setPendingIngredientId] = useState("")
+  const [pendingAmount, setPendingAmount] = useState("")
+  const [pendingUnit, setPendingUnit] = useState<string>(UNITS[0])
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    setValue,
+    getValues,
+    formState: { errors },
+  } = useForm<RecipeFormValues>({
+    resolver: zodResolver(RecipeSchema),
+    defaultValues: {
+      title: "",
+      base_servings: 4,
+      prep_time_minutes: 30,
+      effort_level: 3,
+      instructions: [],
+      ingredients: [],
+      author_ids: [],
+    },
+  })
+
+  const ingredientsArray = useFieldArray<RecipeFormValues, "ingredients">({
+    control,
+    name: "ingredients",
+  })
+  const instructionsArray = useFieldArray<RecipeFormValues, "instructions">({
+    control,
+    name: "instructions",
+  })
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from("ingredients")
+      .select("id, name, default_unit")
+      .order("name")
+      .then(({ data, error }) => {
+        if (!error && data) setIngredients(data)
+        setLoadingIngredients(false)
+      })
+  }, [])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from("authors")
+      .select("id, name")
+      .order("name")
+      .then(({ data, error }) => {
+        if (!error && data) setAuthors(data)
+        setLoadingAuthors(false)
+      })
+  }, [])
+
+  const ingredientOptions = useMemo(
+    () =>
+      ingredients.map((ingredient) => ({
+        value: ingredient.id,
+        label: ingredient.default_unit
+          ? `${ingredient.name} (${ingredient.default_unit})`
+          : ingredient.name,
+      })),
+    [ingredients]
+  )
+
+  const authorOptions = useMemo(
+    () => authors.map((author) => ({ value: author.id, label: author.name })),
+    [authors]
+  )
+
+  const pendingIngredient = ingredients.find(
+    (ingredient) => ingredient.id === pendingIngredientId
+  )
+
+  const addIngredientToList = () => {
+    const project = { ingredient_id: pendingIngredientId, amount_used: Number(pendingAmount) || 0, unit: pendingUnit }
+    ingredientsArray.append(project)
+    setPendingIngredientId("")
+    setPendingAmount("")
+    setPendingUnit(pendingIngredient?.default_unit ?? UNITS[0])
+  }
+
+  const onPendingIngredientChange = (value: string) => {
+    setPendingIngredientId(value)
+    const ingredient = ingredients.find((ingredient) => ingredient.id === value)
+    if (ingredient?.default_unit) setPendingUnit(ingredient.default_unit)
+  }
+
+  const onSubmit = useCallback(
+    (values: RecipeFormValues) => {
+      const fd = new FormData()
+      fd.set("title", values.title)
+      fd.set("base_servings", String(values.base_servings))
+      fd.set("prep_time_minutes", String(values.prep_time_minutes))
+      fd.set("effort_level", String(values.effort_level))
+      values.instructions.forEach((step) => fd.append("instructions", step.text))
+      values.ingredients.forEach((line) => {
+        fd.append("ingredient_id", line.ingredient_id)
+        fd.append("amount_used", String(line.amount_used))
+        fd.append("unit", line.unit)
+      })
+      values.author_ids.forEach((author_id) => fd.append("author_id", author_id))
+      formAction(fd)
+    },
+    [formAction]
+  )
+
+  return (
+    <Card className="w-full max-w-2xl">
+      <CardHeader>
+        <CardTitle>Nova receita</CardTitle>
+        <CardDescription>
+          Preencha os dados básicos, os passos e os ingredientes da receita.
+        </CardDescription>
+      </CardHeader>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <CardContent className="flex flex-col gap-6">
+          {/* Básicos */}
+          <div className="flex flex-col gap-4">
+            <Field orientation="vertical">
+              <FieldLabel htmlFor="title">Título</FieldLabel>
+              <FieldContent>
+                <Input
+                  id="title"
+                  placeholder="ex.: Carbonara"
+                  {...register("title")}
+                />
+                <FieldError errors={[{ message: errors.title?.message }]} />
+              </FieldContent>
+            </Field>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field orientation="vertical">
+                <FieldLabel htmlFor="base_servings">Porções base</FieldLabel>
+                <FieldContent>
+                  <Input id="base_servings" type="number" min={1} inputMode="numeric" {...register("base_servings", { setValueAs: (v) => Number(v) })} />
+                  <FieldError errors={[{ message: errors.base_servings?.message }]} />
+                </FieldContent>
+              </Field>
+              <Field orientation="vertical">
+                <FieldLabel htmlFor="prep_time_minutes">Tempo de preparo (min)</FieldLabel>
+                <FieldContent>
+                  <Input id="prep_time_minutes" type="number" min={0} inputMode="numeric" {...register("prep_time_minutes", { setValueAs: (v) => Number(v) })} />
+                  <FieldError errors={[{ message: errors.prep_time_minutes?.message }]} />
+                </FieldContent>
+              </Field>
+            </div>
+
+            <Field orientation="vertical">
+              <FieldLabel>Nível de esforço</FieldLabel>
+              <FieldContent>
+                <Controller
+                  control={control}
+                  name="effort_level"
+                  render={({ field }) => (
+                    <div className="w-full">
+                      <Slider
+                        min={1}
+                        max={5}
+                        step={1}
+                        value={[field.value]}
+                        onValueChange={(value) =>
+                          field.onChange(Array.isArray(value) ? value[0] : value)
+                        }
+                      />
+                      <FieldDescription className="mt-2 font-medium">
+                        {field.value} · {EFFORT_LABELS[field.value - 1]}
+                      </FieldDescription>
+                    </div>
+                  )}
+                />
+              </FieldContent>
+            </Field>
+          </div>
+
+          <Separator />
+
+          {/* Instruções */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-medium">Instruções (passo a passo)</h2>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => instructionsArray.append({ text: "" })}
+              >
+                <PlusIcon /> Adicionar passo
+              </Button>
+            </div>
+            {instructionsArray.fields.map((field, index) => (
+              <Field key={field.id} orientation="vertical">
+                <FieldContent>
+                  <div className="flex gap-2">
+                    <span className="mt-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-sm font-medium">
+                      {index + 1}
+                    </span>
+                    <Textarea
+                      rows={2}
+                      placeholder={`Passo ${index + 1}`}
+                      {...register(`instructions.${index}.text` as const)}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Remover passo"
+                      onClick={() => instructionsArray.remove(index)}
+                    >
+                      <Trash2Icon />
+                    </Button>
+                  </div>
+                  <FieldError errors={[{ message: errors.instructions?.[index]?.text?.message }]} />
+                </FieldContent>
+              </Field>
+            ))}
+            {errors.instructions?.root?.message && (
+              <p className="text-sm text-destructive">{errors.instructions.root.message}</p>
+            )}
+            {errors.instructions && typeof errors.instructions.message === "string" && (
+              <p className="text-sm text-destructive">{errors.instructions.message}</p>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Ingredientes */}
+          <div className="flex flex-col gap-4">
+            <h2 className="text-sm font-medium">Ingredientes</h2>
+
+            <div className="flex flex-col gap-3 rounded-lg border p-3">
+              <Field orientation="vertical">
+                <FieldLabel>Ingrediente</FieldLabel>
+                <FieldContent>
+                  <Combobox
+                    options={ingredientOptions}
+                    value={pendingIngredientId}
+                    onValueChange={onPendingIngredientChange}
+                    placeholder="Buscar ingrediente..."
+                    emptyText="Nenhum ingrediente encontrado. Cadastre em /ingredients/new"
+                    loading={loadingIngredients}
+                  />
+                </FieldContent>
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field orientation="vertical">
+                  <FieldLabel>Quantidade</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={pendingAmount}
+                      onChange={(e) => setPendingAmount(e.target.value)}
+                    />
+                  </FieldContent>
+                </Field>
+                <Field orientation="vertical">
+                  <FieldLabel>Unidade</FieldLabel>
+                  <FieldContent>
+                    <Select value={pendingUnit} onValueChange={(v) => setPendingUnit(v ?? "")}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="w-full">
+                        {UNITS.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FieldContent>
+                </Field>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="self-start"
+                disabled={!pendingIngredientId || !pendingAmount}
+                onClick={addIngredientToList}
+              >
+                <PlusIcon /> Adicionar à lista
+              </Button>
+            </div>
+
+            {ingredientsArray.fields.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {ingredientsArray.fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                  >
+                    <span className="flex-1">
+                      {ingredientOptions.find((o) => o.value === field.ingredient_id)?.label ?? "Ingrediente"}
+                      <span className="ml-2 text-muted-foreground">
+                        {field.amount_used} {field.unit}
+                      </span>
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Remover ingrediente"
+                      onClick={() => ingredientsArray.remove(index)}
+                    >
+                      <Trash2Icon />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {errors.ingredients?.message && (
+              <p className="text-sm text-destructive">{errors.ingredients.message}</p>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Autores */}
+          <Field orientation="vertical">
+            <FieldLabel>Autores</FieldLabel>
+            <FieldContent>
+              <ComboboxMulti
+                options={authorOptions}
+                values={getValues("author_ids")}
+                onValueChange={(ids) => setValue("author_ids", ids, { shouldValidate: true })}
+                placeholder="Selecione os autores (opcional)"
+                emptyText="Nenhum autor. Cadastre em /authors/new"
+                loading={loadingAuthors}
+              />
+            </FieldContent>
+          </Field>
+
+          {state?.message && (
+            <p className="text-sm text-destructive">{state.message}</p>
+          )}
+        </CardContent>
+        <CardFooter className="flex-col gap-2">
+          <Button type="submit" disabled={pending} className="w-full">
+            {pending ? "Salvando..." : "Criar receita"}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Receita salva como versão base (preparada para versionamento na Fase 2).
+          </p>
+        </CardFooter>
+      </form>
+    </Card>
+  )
+}
