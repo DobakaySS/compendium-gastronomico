@@ -49,6 +49,15 @@ export async function AppHeader() {
             </Link>
           )}
 
+          {user && canWrite(role) && (
+            <Link
+              href="/recipes/smart-import"
+              className="rounded-full px-3 py-1.5 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:text-zinc-100"
+            >
+              Smart Import
+            </Link>
+          )}
+
           {user && canAdmin(role) && (
             <Link
               href="/admin/users"

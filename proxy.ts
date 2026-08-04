@@ -14,6 +14,7 @@ const writeRoutes = [
   "/ingredients/new",
   "/authors/new",
   "/recipes/new",
+  "/recipes/smart-import",
 ]
 const adminRoutes = ["/admin"]
 const publicRoutes = ["/login"]
