@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { AppHeader } from "@/components/layout/app-header"
 import { Separator } from "@/components/ui/separator"
 import { RecipeViewer } from "@/components/recipes/recipe-viewer"
+import { userRole, canWrite } from "@/lib/roles"
 import { CITIES, type City } from "@/lib/cities"
 import type { ViewerIngredient } from "@/lib/calculations"
 import type {
@@ -67,6 +68,11 @@ export default async function RecipeDetailPage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const writer = canWrite(userRole(user))
 
   const { data: recipe, error } = await supabase
     .from("recipes")
@@ -252,12 +258,22 @@ export default async function RecipeDetailPage({
       <AppHeader />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 sm:py-10">
-        <Link
-          href="/"
-          className="mb-6 inline-flex items-center gap-1 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-500 transition-colors hover:text-zinc-200"
-        >
-          ← Voltar às receitas
-        </Link>
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-500 transition-colors hover:text-zinc-200"
+          >
+            ← Voltar às receitas
+          </Link>
+          {writer && (
+            <Link
+              href={`/recipes/${id}/edit`}
+              className="inline-flex items-center rounded-full border border-zinc-700 px-3 py-1.5 text-[0.65rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100"
+            >
+              Editar
+            </Link>
+          )}
+        </div>
 
         {/* Hero */}
         <div className="relative overflow-hidden rounded-3xl bg-zinc-900 ring-1 ring-zinc-800">

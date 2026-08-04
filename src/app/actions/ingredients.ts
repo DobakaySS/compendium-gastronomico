@@ -103,3 +103,42 @@ export async function createIngredientQuick(
   revalidatePath("/recipes/new")
   return { data: { id: data.id } }
 }
+
+export async function updateIngredient(
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState<{ id: string }>> {
+  const auth = await requireRole(["admin", "colaborador"])
+  if (!auth.ok) return { message: auth.message }
+
+  const id = String(formData.get("id") ?? "")
+  if (!id) {
+    return { message: "Ingrediente inválido." }
+  }
+
+  const parsed = IngredientSchema.safeParse(normalizeIngredientFormData(formData))
+  if (!parsed.success) {
+    return { errors: parsed.error.flatten().fieldErrors }
+  }
+
+  const { name, default_unit, ...macros } = parsed.data
+
+  const { error } = await auth.supabase
+    .from("ingredients")
+    .update({
+      name,
+      default_unit,
+      kcal_per_100g: macros.kcal_per_100g,
+      protein_per_100g: macros.protein_per_100g,
+      carbs_per_100g: macros.carbs_per_100g,
+      fat_per_100g: macros.fat_per_100g,
+    })
+    .eq("id", id)
+
+  if (error) {
+    return { message: error.message }
+  }
+
+  revalidatePath("/", "layout")
+  redirect("/ingredients")
+}

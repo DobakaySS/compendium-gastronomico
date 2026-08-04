@@ -15,6 +15,11 @@ const actions = [
     description: "Adicione um alimento ao catálogo com macros por 100g.",
   },
   {
+    href: "/ingredients",
+    label: "Catálogo de ingredientes",
+    description: "Consulte e edite os alimentos e macros por 100g.",
+  },
+  {
     href: "/authors/new",
     label: "Novo autor",
     description: "Cadastre um autor para as receitas do compêndium.",

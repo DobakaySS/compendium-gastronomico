@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { IngredientForm } from "@/components/ingredients/ingredient-form"
 import { AppHeader } from "@/components/layout/app-header"
+import { createIngredient } from "@/app/actions/ingredients"
 
 export default async function NewIngredientPage() {
   return (
@@ -18,7 +19,7 @@ export default async function NewIngredientPage() {
         </p>
         <div className="mt-8">
           <Suspense>
-            <IngredientForm />
+            <IngredientForm action={createIngredient} />
           </Suspense>
         </div>
       </main>

@@ -150,6 +150,7 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
             create_new: {
               name: sel.newName.trim(),
               default_unit: sel.newUnit || ing.unit,
+              macros: ing.macros,
             },
           })
         } else if (sel.selectedId && sel.selectedId !== CREATE_NEW_VALUE) {
@@ -386,6 +387,19 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
                           className="h-8 w-full"
                         />
                       </div>
+                    )}
+
+                    {(ing.macros.kcal_per_100g != null ||
+                      ing.macros.protein_per_100g != null ||
+                      ing.macros.carbs_per_100g != null ||
+                      ing.macros.fat_per_100g != null) && (
+                      <p className="mt-2 text-[0.65rem] text-zinc-500">
+                        Macros estimados /100g:{" "}
+                        {ing.macros.kcal_per_100g ?? "—"} kcal · P{" "}
+                        {ing.macros.protein_per_100g ?? "—"}g · C{" "}
+                        {ing.macros.carbs_per_100g ?? "—"}g · G{" "}
+                        {ing.macros.fat_per_100g ?? "—"}g
+                      </p>
                     )}
                   </li>
                 )

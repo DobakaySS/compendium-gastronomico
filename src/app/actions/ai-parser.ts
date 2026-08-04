@@ -19,11 +19,19 @@ export type ParsedRecipe = {
   techniques: string[]
 }
 
+export type AiMacros = {
+  kcal_per_100g: number | null
+  protein_per_100g: number | null
+  carbs_per_100g: number | null
+  fat_per_100g: number | null
+}
+
 export type MatchedIngredient = {
   ai_name: string
   amount_used: number
   unit: string
   match_type: "exact"
+  macros: AiMacros
   db_ingredient: Pick<Ingredient, "id" | "name" | "default_unit">
 }
 
@@ -32,6 +40,7 @@ export type UnmatchedIngredient = {
   amount_used: number
   unit: string
   match_type: "unmatched"
+  macros: AiMacros
   suggestions: Array<
     Pick<Ingredient, "id" | "name" | "default_unit">
   >
@@ -53,7 +62,7 @@ export type ConfirmedIngredient = {
   amount_used: number
   unit: string
   ingredient_id?: string
-  create_new?: { name: string; default_unit: string }
+  create_new?: { name: string; default_unit: string; macros?: AiMacros }
 }
 
 export type SaveImportPayload = {
@@ -83,6 +92,18 @@ function toNum(value: unknown, fallback: number): number {
   return fallback
 }
 
+function toOptionalNum(value: unknown): number | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.round(value * 10) / 10
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value)
+    if (Number.isFinite(n)) return Math.round(n * 10) / 10
+  }
+  return null
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
@@ -106,7 +127,29 @@ function normalizeInstructions(value: unknown): Array<{ text: string }> {
     .filter((v): v is { text: string } => v !== null && v.text.length > 0)
 }
 
-type AiIngredient = { name: string; amount_used: number; unit: string }
+type AiIngredient = {
+  name: string
+  amount_used: number
+  unit: string
+  macros: AiMacros
+}
+
+function normalizeAiMacros(value: unknown): AiMacros {
+  const empty: AiMacros = {
+    kcal_per_100g: null,
+    protein_per_100g: null,
+    carbs_per_100g: null,
+    fat_per_100g: null,
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return empty
+  const o = value as Record<string, unknown>
+  return {
+    kcal_per_100g: toOptionalNum(o.kcal_per_100g),
+    protein_per_100g: toOptionalNum(o.protein_per_100g),
+    carbs_per_100g: toOptionalNum(o.carbs_per_100g),
+    fat_per_100g: toOptionalNum(o.fat_per_100g),
+  }
+}
 
 function normalizeAiIngredients(value: unknown): AiIngredient[] {
   if (!Array.isArray(value)) return []
@@ -118,7 +161,12 @@ function normalizeAiIngredients(value: unknown): AiIngredient[] {
       const amount = toNum(o.amount_used, 0)
       const unit = String(o.unit ?? "g").trim()
       if (!name || amount <= 0) return null
-      return { name, amount_used: amount, unit }
+      return {
+        name,
+        amount_used: amount,
+        unit,
+        macros: normalizeAiMacros(o.macros_per_100g),
+      }
     })
     .filter(Boolean) as AiIngredient[]
 }
@@ -143,7 +191,13 @@ Siga estritamente este schema:
     {
       "name": "string (nome do ingrediente)",
       "amount_used": number (quantidade, ex: 500),
-      "unit": "string (unidade: g, kg, ml, l, unidade, xícara, colher (sopa), colher (chá))"
+      "unit": "string (unidade: g, kg, ml, l, unidade, xícara, colher (sopa), colher (chá))",
+      "macros_per_100g": {
+        "kcal_per_100g": number|null (kcal por 100g, null se desconhecer),
+        "protein_per_100g": number|null (g por 100g),
+        "carbs_per_100g": number|null (g por 100g),
+        "fat_per_100g": number|null (g por 100g)
+      }
     }
   ]
 }
@@ -154,13 +208,13 @@ Regras:
 - Retorne APENAS o JSON, sem texto introdutório.`
 
 // ---------------------------------------------------------------------------
-// Gemini call + parse
+// Gemini helper (genérico, JSON)
 // ---------------------------------------------------------------------------
 
-async function callGemini(rawText: string): Promise<{
-  recipe: ParsedRecipe
-  aiIngredients: AiIngredient[]
-}> {
+async function requestGeminiJson(
+  systemInstruction: string,
+  userText: string
+): Promise<Record<string, unknown>> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY não configurada.")
@@ -176,8 +230,8 @@ async function callGemini(rawText: string): Promise<{
   })
 
   const result = await model.generateContent({
-    systemInstruction: SYSTEM_PROMPT,
-    contents: [{ role: "user", parts: [{ text: rawText }] }],
+    systemInstruction,
+    contents: [{ role: "user", parts: [{ text: userText }] }],
   })
 
   const jsonText = result.response.text()
@@ -195,7 +249,22 @@ async function callGemini(rawText: string): Promise<{
     throw new Error("Formato de resposta inesperado da IA.")
   }
 
-  const obj = json as Record<string, unknown>
+  return json as Record<string, unknown>
+}
+
+function geminiErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : "Erro desconhecido"
+  if (message.includes("API key") || message.includes("GEMINI")) {
+    return "Chave da API Gemini não configurada. Adicione GEMINI_API_KEY ao .env.local."
+  }
+  return `Falha na comunicação com a IA: ${message}`
+}
+
+async function callGemini(rawText: string): Promise<{
+  recipe: ParsedRecipe
+  aiIngredients: AiIngredient[]
+}> {
+  const obj = await requestGeminiJson(SYSTEM_PROMPT, rawText)
 
   const recipe: ParsedRecipe = {
     title: String(obj.title ?? "").trim(),
@@ -235,11 +304,7 @@ export async function parseRecipeAction(
     recipe = result.recipe
     aiIngredients = result.aiIngredients
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro desconhecido"
-    if (message.includes("API key") || message.includes("GEMINI")) {
-      return { ok: false, error: "Chave da API Gemini não configurada. Adicione GEMINI_API_KEY ao .env.local." }
-    }
-    return { ok: false, error: `Falha na comunicação com a IA: ${message}` }
+    return { ok: false, error: geminiErrorMessage(err) }
   }
 
   // Fuzzy match contra DB
@@ -267,6 +332,7 @@ export async function parseRecipeAction(
         amount_used: ai.amount_used,
         unit: ai.unit,
         match_type: "exact",
+        macros: ai.macros,
         db_ingredient: exact,
       } satisfies MatchedIngredient
     }
@@ -276,11 +342,56 @@ export async function parseRecipeAction(
       amount_used: ai.amount_used,
       unit: ai.unit,
       match_type: "unmatched",
+      macros: ai.macros,
       suggestions: matches,
     } satisfies UnmatchedIngredient
   })
 
   return { ok: true, data: { recipe, ingredients } }
+}
+
+// ---------------------------------------------------------------------------
+// fetchIngredientMacrosAction — estima macros por 100g de um ingrediente
+// ---------------------------------------------------------------------------
+
+const MACROS_SYSTEM_PROMPT = `Você é um especialista em composição nutricional de alimentos.
+Receba o nome de um alimento/ingrediente e retorne APENAS um objeto JSON válido,
+sem comentários ou texto adicional, com a seguinte estrutura:
+
+{
+  "kcal_per_100g": number|null (calorias por 100g),
+  "protein_per_100g": number|null (proteína em g por 100g),
+  "carbs_per_100g": number|null (carboidratos em g por 100g),
+  "fat_per_100g": number|null (gorduras em g por 100g)
+}
+
+Use valores estimados para o alimento cru/in natura na forma mais comum de uso culinário.
+Use null quando não tiver certeza razoável. Valores devem ser números positivos.`
+
+export type FetchMacrosResponse =
+  | { ok: true; data: AiMacros }
+  | { ok: false; error: string }
+
+export async function fetchIngredientMacrosAction(
+  ingredientName: string
+): Promise<FetchMacrosResponse> {
+  const auth = await requireRole(["admin", "colaborador"])
+  if (!auth.ok) return { ok: false, error: auth.message }
+
+  try {
+    const obj = await requestGeminiJson(MACROS_SYSTEM_PROMPT, ingredientName)
+    return {
+      ok: true,
+      data: {
+        kcal_per_100g: toOptionalNum(obj.kcal_per_100g),
+        protein_per_100g: toOptionalNum(obj.protein_per_100g),
+        carbs_per_100g: toOptionalNum(obj.carbs_per_100g),
+        fat_per_100g: toOptionalNum(obj.fat_per_100g),
+      },
+    }
+  } catch (err: unknown) {
+    return { ok: false, error: geminiErrorMessage(err) }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -313,11 +424,21 @@ export async function saveSmartImport(
     }
 
     if (ci.create_new) {
+      const macros = ci.create_new.macros ?? {
+        kcal_per_100g: null,
+        protein_per_100g: null,
+        carbs_per_100g: null,
+        fat_per_100g: null,
+      }
       const { data: created, error: createErr } = await supabase
         .from("ingredients")
         .insert({
           name: ci.create_new.name,
           default_unit: ci.create_new.default_unit,
+          kcal_per_100g: macros.kcal_per_100g,
+          protein_per_100g: macros.protein_per_100g,
+          carbs_per_100g: macros.carbs_per_100g,
+          fat_per_100g: macros.fat_per_100g,
         })
         .select("id")
         .single()

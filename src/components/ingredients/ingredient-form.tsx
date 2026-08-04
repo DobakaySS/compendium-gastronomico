@@ -1,13 +1,15 @@
 "use client"
 
-import { useActionState, useCallback, startTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useActionState, useCallback, startTransition, useTransition } from "react"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   IngredientSchema,
   type IngredientFormValues,
 } from "@/lib/schema"
-import { createIngredient, type FormState } from "@/app/actions/ingredients"
+import { type FormState } from "@/app/actions/ingredients"
+import { fetchIngredientMacrosAction } from "@/app/actions/ai-parser"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -27,35 +29,83 @@ import {
 } from "@/components/ui/card"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 import { Controller } from "react-hook-form"
+import { SparklesIcon } from "lucide-react"
 
 const UNITS = ["g", "kg", "ml", "l", "unidade", "xícara", "colher (sopa)", "colher (chá)"] as const
 
-export function IngredientForm() {
+type IngredientFormProps = {
+  mode?: "create" | "edit"
+  action: (
+    prev: FormState<{ id: string }>,
+    formData: FormData
+  ) => Promise<FormState<{ id: string }>>
+  defaultValues?: IngredientFormValues & { id?: string }
+  submitLabel?: string
+}
+
+const EMPTY_DEFAULTS: IngredientFormValues = {
+  name: "",
+  default_unit: "g",
+  kcal_per_100g: null,
+  protein_per_100g: null,
+  carbs_per_100g: null,
+  fat_per_100g: null,
+}
+
+export function IngredientForm({
+  mode = "create",
+  action,
+  defaultValues,
+  submitLabel = "Cadastrar ingrediente",
+}: IngredientFormProps) {
   const [state, formAction, pending] = useActionState<
     FormState<{ id: string }>,
     FormData
-  >(createIngredient, null)
+  >(action, null)
 
   const {
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<IngredientFormValues>({
     resolver: zodResolver(IngredientSchema),
     defaultValues: {
-      name: "",
-      default_unit: "g",
-      kcal_per_100g: null,
-      protein_per_100g: null,
-      carbs_per_100g: null,
-      fat_per_100g: null,
+      ...EMPTY_DEFAULTS,
+      ...(defaultValues ?? {}),
     },
   })
+
+  const name = useWatch({ control, name: "name" })
+  const [fillingMacros, startMacrosTransition] = useTransition()
+
+  const ingredientId = defaultValues?.id
+
+  const fillMacrosWithAI = useCallback(() => {
+    const ingredientName = String(name ?? "").trim()
+    if (!ingredientName) {
+      toast.error("Informe o nome do ingrediente primeiro.")
+      return
+    }
+    startMacrosTransition(async () => {
+      const res = await fetchIngredientMacrosAction(ingredientName)
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      setValue("kcal_per_100g", res.data.kcal_per_100g)
+      setValue("protein_per_100g", res.data.protein_per_100g)
+      setValue("carbs_per_100g", res.data.carbs_per_100g)
+      setValue("fat_per_100g", res.data.fat_per_100g)
+      toast.success("Macros estimados pela IA. Revise antes de salvar.")
+    })
+  }, [name, setValue])
 
   const onSubmit = useCallback(
     (values: IngredientFormValues) => {
       const fd = new FormData()
+      if (ingredientId) fd.set("id", ingredientId)
       fd.set("name", values.name)
       fd.set("default_unit", values.default_unit)
       fd.set("kcal_per_100g", String(values.kcal_per_100g ?? ""))
@@ -66,16 +116,19 @@ export function IngredientForm() {
         formAction(fd)
       })
     },
-    [formAction]
+    [formAction, ingredientId]
   )
 
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Novo ingrediente</CardTitle>
+        <CardTitle>
+          {mode === "edit" ? "Editar ingrediente" : "Novo ingrediente"}
+        </CardTitle>
         <CardDescription>
-          Cadastre um ingrediente e seus macros por 100g. Ele fica disponível
-          no catálogo global.
+          {mode === "edit"
+            ? "Atualize o nome, a unidade padrão e os macros por 100g."
+            : "Cadastre um ingrediente e seus macros por 100g. Ele fica disponível no catálogo global."}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -120,6 +173,20 @@ export function IngredientForm() {
             </FieldContent>
           </Field>
 
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Macros por 100g</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={fillingMacros}
+              onClick={fillMacrosWithAI}
+            >
+              <SparklesIcon className="size-3.5" />
+              {fillingMacros ? "Buscando..." : "Preencher com IA"}
+            </Button>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             {(
               [
@@ -128,24 +195,24 @@ export function IngredientForm() {
                 ["carbs_per_100g", "Carboidratos (g)"],
                 ["fat_per_100g", "Gorduras (g)"],
               ] as const
-            ).map(([name, label]) => (
-              <Field key={name} orientation="vertical">
-                <FieldLabel htmlFor={name}>{label}</FieldLabel>
+            ).map(([nameKey, label]) => (
+              <Field key={nameKey} orientation="vertical">
+                <FieldLabel htmlFor={nameKey}>{label}</FieldLabel>
                 <FieldContent>
                   <Input
-                    id={name}
+                    id={nameKey}
                     type="number"
                     min={0}
                     step="0.1"
                     inputMode="decimal"
                     placeholder="0"
-                    {...register(name, {
+                    {...register(nameKey, {
                       setValueAs: (v) =>
                         v === "" || v === null || v === undefined ? null : Number(v),
                     })}
                   />
                   <FieldError
-                    errors={[{ message: errors[name]?.message as string | undefined }]}
+                    errors={[{ message: errors[nameKey]?.message as string | undefined }]}
                   />
                 </FieldContent>
               </Field>
@@ -158,7 +225,7 @@ export function IngredientForm() {
         </CardContent>
         <CardFooter>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Salvando..." : "Cadastrar ingrediente"}
+            {pending ? "Salvando..." : submitLabel}
           </Button>
         </CardFooter>
       </form>

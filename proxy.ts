@@ -12,8 +12,10 @@ const protectedRoutes = [
 const writeRoutes = [
   "/dashboard",
   "/ingredients/new",
+  "/ingredients/",
   "/authors/new",
   "/recipes/new",
+  "/recipes/",
   "/recipes/smart-import",
 ]
 const adminRoutes = ["/admin"]

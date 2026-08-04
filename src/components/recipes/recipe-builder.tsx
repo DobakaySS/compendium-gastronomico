@@ -4,7 +4,7 @@ import { useActionState, useCallback, useEffect, useMemo, useState, startTransit
 import { useForm, useFieldArray, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { RecipeSchema, type RecipeFormValues } from "@/lib/schema"
-import { createRecipe, type FormState } from "@/app/actions/recipes"
+import { saveRecipe, type FormState } from "@/app/actions/recipes"
 import { createClient } from "@/lib/supabase/client"
 import type { Ingredient, Author } from "@/lib/schema"
 import { Button } from "@/components/ui/button"
@@ -42,11 +42,35 @@ const UNITS = ["g", "kg", "ml", "l", "unidade", "xícara", "colher (sopa)", "col
 
 const EFFORT_LABELS = ["Muito fácil", "Fácil", "Médio", "Difícil", "Muito difícil"]
 
-export function RecipeBuilder() {
+type RecipeBuilderProps = {
+  mode?: "create" | "edit"
+  recipeId?: string
+  initialData?: RecipeFormValues
+  submitLabel?: string
+}
+
+const DEFAULT_VALUES: RecipeFormValues = {
+  title: "",
+  base_servings: 4,
+  prep_time_minutes: 30,
+  effort_level: 3,
+  instructions: [],
+  ingredients: [],
+  author_ids: [],
+}
+
+export function RecipeBuilder({
+  mode = "create",
+  recipeId,
+  initialData,
+  submitLabel = "Criar receita",
+}: RecipeBuilderProps) {
   const [state, formAction, pending] = useActionState<
     FormState<{ id: string }>,
     FormData
-  >(createRecipe, null)
+  >(saveRecipe, null)
+
+  const [saveMode, setSaveMode] = useState<"update" | "version">("update")
 
   const [ingredients, setIngredients] = useState<
     Array<Pick<Ingredient, "id" | "name" | "default_unit">>
@@ -69,15 +93,7 @@ export function RecipeBuilder() {
     formState: { errors },
   } = useForm<RecipeFormValues>({
     resolver: zodResolver(RecipeSchema),
-    defaultValues: {
-      title: "",
-      base_servings: 4,
-      prep_time_minutes: 30,
-      effort_level: 3,
-      instructions: [],
-      ingredients: [],
-      author_ids: [],
-    },
+    defaultValues: initialData ?? DEFAULT_VALUES,
   })
 
   const ingredientsArray = useFieldArray<RecipeFormValues, "ingredients">({
@@ -164,6 +180,8 @@ export function RecipeBuilder() {
   const onSubmit = useCallback(
     (values: RecipeFormValues) => {
       const fd = new FormData()
+      fd.set("save_mode", mode === "edit" ? saveMode : "create")
+      if (mode === "edit" && recipeId) fd.set("id", recipeId)
       fd.set("title", values.title)
       fd.set("base_servings", String(values.base_servings))
       fd.set("prep_time_minutes", String(values.prep_time_minutes))
@@ -179,13 +197,15 @@ export function RecipeBuilder() {
         formAction(fd)
       })
     },
-    [formAction]
+    [formAction, mode, recipeId, saveMode]
   )
 
   return (
     <Card className="w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>Nova receita</CardTitle>
+        <CardTitle>
+          {mode === "edit" ? "Editar receita" : "Nova receita"}
+        </CardTitle>
         <CardDescription>
           Preencha os dados básicos, os passos e os ingredientes da receita.
         </CardDescription>
@@ -427,12 +447,48 @@ export function RecipeBuilder() {
             <p className="text-sm text-destructive">{state.message}</p>
           )}
         </CardContent>
-        <CardFooter className="flex-col gap-2">
+        <CardFooter className="flex-col gap-3">
+          {mode === "edit" && (
+            <div className="w-full">
+              <div className="grid grid-cols-2 gap-2 rounded-xl border border-zinc-800 bg-zinc-900/40 p-1">
+                <button
+                  type="button"
+                  onClick={() => setSaveMode("update")}
+                  className={`rounded-lg px-3 py-2 text-[0.7rem] tracking-[0.15em] uppercase transition-colors ${
+                    saveMode === "update"
+                      ? "bg-zinc-100 text-zinc-900"
+                      : "text-zinc-400 hover:text-zinc-100"
+                  }`}
+                >
+                  Corrigir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSaveMode("version")}
+                  className={`rounded-lg px-3 py-2 text-[0.7rem] tracking-[0.15em] uppercase transition-colors ${
+                    saveMode === "version"
+                      ? "bg-zinc-100 text-zinc-900"
+                      : "text-zinc-400 hover:text-zinc-100"
+                  }`}
+                >
+                  Nova versão
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {saveMode === "update"
+                  ? "Correção direta: atualiza esta receita, preservando o histórico das versões anteriores."
+                  : "Cria uma nova versão (vN) baseada nestes dados. A receita original é preservada e vira a versão base."}
+              </p>
+            </div>
+          )}
+
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Salvando..." : "Criar receita"}
+            {pending ? "Salvando..." : submitLabel}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Receita salva como versão base (preparada para versionamento na Fase 2).
+            {mode === "edit"
+              ? "Receita salva na família de versões (Fase 2)."
+              : "Receita salva como versão base (preparada para versionamento na Fase 2)."}
           </p>
         </CardFooter>
       </form>
