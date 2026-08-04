@@ -28,9 +28,28 @@ export type Recipe = {
   prep_time_minutes: number
   effort_level: number
   instructions: string[]
+  image_url: string | null
+  techniques: string[] | null
   parent_recipe_id: string | null
   version_name: string | null
   public_token: string | null
+}
+
+export type IngredientPrice = {
+  id: string
+  ingredient_id: string
+  city: string
+  price: number
+  currency: string
+  recorded_on: string
+}
+
+export type RecipeLog = {
+  id: string
+  recipe_id: string
+  author_id: string
+  note: string | null
+  created_at: string
 }
 
 export type RecipeIngredient = {
