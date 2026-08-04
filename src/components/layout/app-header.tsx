@@ -1,7 +1,17 @@
 import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
+import { canWrite, canAdmin, userRole } from "@/lib/roles"
 import { LogoutButton } from "@/components/auth/logout-button"
+import { LoginLink } from "@/components/auth/login-link"
 
-export function AppHeader() {
+export async function AppHeader() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const role = userRole(user)
+
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-800/70 bg-zinc-950/80 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
@@ -22,17 +32,30 @@ export function AppHeader() {
         <nav className="flex items-center gap-1 sm:gap-2">
           <Link
             href="/"
-            className="rounded-full px-3 py-1.5 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-400 transition-colors hover:text-zinc-100"
+            className="rounded-full px-3 py-1.5 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:text-zinc-100"
           >
             Receitas
           </Link>
-          <Link
-            href="/recipes/new"
-            className="rounded-full px-3 py-1.5 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-400 transition-colors hover:text-zinc-100"
-          >
-            Nova
-          </Link>
-          <LogoutButton />
+
+          {user && canWrite(role) && (
+            <Link
+              href="/recipes/new"
+              className="rounded-full px-3 py-1.5 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:text-zinc-100"
+            >
+              Nova
+            </Link>
+          )}
+
+          {user && canAdmin(role) && (
+            <Link
+              href="/admin/users"
+              className="rounded-full px-3 py-1.5 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:text-zinc-100"
+            >
+              Usuários
+            </Link>
+          )}
+
+          {user ? <LogoutButton /> : <LoginLink />}
         </nav>
       </div>
     </header>

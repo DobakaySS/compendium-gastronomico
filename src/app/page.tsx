@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
+import { userRole, canWrite } from "@/lib/roles"
+import { loginAsVisitor } from "@/app/actions/auth"
 import { Button } from "@/components/ui/button"
 import { AppHeader } from "@/components/layout/app-header"
 import { RecipeCard } from "@/components/recipes/recipe-card"
@@ -12,6 +14,9 @@ export default async function Home() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const role = userRole(user)
+
+  // Visitante puro (sem sessão): landing editorial com entradas.
   if (!user) {
     return (
       <main className="relative flex min-h-dvh flex-col overflow-hidden">
@@ -27,7 +32,7 @@ export default async function Home() {
             Receitas com porções dinâmicas, macros precisos e evolução
             colaborativa. Sua coleção culinária, elevada.
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center gap-3 sm:flex-row">
             <Button
               size="lg"
               nativeButton={false}
@@ -36,15 +41,15 @@ export default async function Home() {
             >
               Entrar
             </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              nativeButton={false}
-              render={<Link href="/signup" />}
-              className="rounded-full px-7"
-            >
-              Criar conta
-            </Button>
+            <form action={loginAsVisitor}>
+              <Button
+                variant="outline"
+                size="lg"
+                className="rounded-full px-7"
+              >
+                Entrar como visitante
+              </Button>
+            </form>
           </div>
         </div>
       </main>
@@ -60,6 +65,8 @@ export default async function Home() {
     throw new Error(error.message)
   }
 
+  const writer = canWrite(role)
+
   return (
     <div className="flex min-h-dvh flex-col">
       <AppHeader />
@@ -67,38 +74,48 @@ export default async function Home() {
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:py-12">
         <div className="mb-8 flex flex-col gap-2">
           <span className="text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
-            Coleção
+            {writer ? "Coleção" : "Visitação"}
           </span>
           <div className="flex items-end justify-between gap-4">
             <h1 className="font-heading text-3xl text-zinc-50 sm:text-4xl">
-              Suas receitas
+              {writer ? "Suas receitas" : "Receitas"}
             </h1>
-            <Link
-              href="/recipes/new"
-              className="mb-1 shrink-0 rounded-full border border-zinc-700 px-4 py-2 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:bg-zinc-800"
-            >
-              + Nova
-            </Link>
+            {writer && (
+              <Link
+                href="/recipes/new"
+                className="mb-1 shrink-0 rounded-full border border-zinc-700 px-4 py-2 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:bg-zinc-800"
+              >
+                + Nova
+              </Link>
+            )}
           </div>
+          {!writer && (
+            <p className="mt-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Modo visitante · apenas visualização
+            </p>
+          )}
         </div>
 
         {recipes.length === 0 ? (
           <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-zinc-800 px-6 py-20 text-center">
             <h2 className="font-heading text-2xl text-zinc-200">
-              Sua coleção está em branco
+              Nenhuma receita no compêndium
             </h2>
             <p className="max-w-sm text-sm text-zinc-500">
-              Registre sua primeira receita para começar a construir o
-              compêndium.
+              {writer
+                ? "Registre sua primeira receita para começar a construir o compêndium."
+                : "As receitas ainda não foram publicadas."}
             </p>
-            <Button
-              size="lg"
-              nativeButton={false}
-              render={<Link href="/recipes/new" />}
-              className="rounded-full px-7"
-            >
-              Criar receita
-            </Button>
+            {writer && (
+              <Button
+                size="lg"
+                nativeButton={false}
+                render={<Link href="/recipes/new" />}
+                className="rounded-full px-7"
+              >
+                Criar receita
+              </Button>
+            )}
           </div>
         ) : (
           <>

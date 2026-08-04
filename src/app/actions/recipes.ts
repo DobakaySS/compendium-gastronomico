@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { requireUser } from "@/lib/crud"
+import { requireRole } from "@/lib/crud"
 import { RecipeSchema } from "@/lib/schema"
 
 export type FormState<T = unknown> =
@@ -17,7 +17,7 @@ export async function createRecipe(
   _prev: FormState,
   formData: FormData
 ): Promise<FormState<{ id: string }>> {
-  const auth = await requireUser()
+  const auth = await requireRole(["admin", "colaborador"])
   if (!auth.ok) return { message: auth.message }
 
   // Reconstrução dos campos dinâmicos a partir do FormData.

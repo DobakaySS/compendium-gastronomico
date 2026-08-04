@@ -47,9 +47,9 @@ export async function login(
     return { message: "E-mail ou senha incorretos." }
   }
 
-  const next = String(formData.get("next") ?? "/dashboard")
+  const next = String(formData.get("next") ?? "/")
   revalidatePath("/", "layout")
-  redirect(next.startsWith("/") ? next : "/dashboard")
+  redirect(next.startsWith("/") ? next : "/")
 }
 
 export async function signup(
@@ -80,6 +80,22 @@ export async function signup(
 
   revalidatePath("/", "layout")
   redirect("/dashboard")
+}
+
+export async function loginAsVisitor(): Promise<never> {
+  const supabase = await createClient()
+
+  const auth = supabase.auth as unknown as {
+    signInAnon: () => Promise<{ error: Error | null }>
+  }
+  const { error } = await auth.signInAnon()
+
+  if (error) {
+    redirect("/login")
+  }
+
+  revalidatePath("/", "layout")
+  redirect("/")
 }
 
 export async function logout() {

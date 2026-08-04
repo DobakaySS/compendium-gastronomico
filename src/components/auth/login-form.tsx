@@ -2,7 +2,7 @@
 
 import { useActionState } from "react"
 import Link from "next/link"
-import { login, type AuthState } from "@/app/actions/auth"
+import { login, loginAsVisitor, type AuthState } from "@/app/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -61,14 +61,28 @@ export function LoginForm({ next }: { next?: string }) {
       >
         {pending ? "Entrando..." : "Entrar"}
       </Button>
-      <div className="flex items-center justify-between text-sm">
-        <Link href="/signup" className="text-zinc-400 underline">
-          Criar conta
-        </Link>
-        <Link href="/auth/update-password" className="text-zinc-400 underline">
-          Esqueci minha senha
-        </Link>
+      <div className="flex items-center gap-3 py-1">
+        <span className="h-px flex-1 bg-zinc-800" />
+        <span className="text-[0.65rem] tracking-[0.25em] uppercase text-zinc-500">
+          ou
+        </span>
+        <span className="h-px flex-1 bg-zinc-800" />
       </div>
+      <form action={loginAsVisitor}>
+        <Button
+          type="submit"
+          variant="outline"
+          className="w-full rounded-full"
+        >
+          Entrar como visitante
+        </Button>
+      </form>
+      <p className="text-center text-sm text-zinc-500">
+        Esqueceu sua senha?{" "}
+        <Link href="/auth/update-password" className="underline">
+          Redefinir
+        </Link>
+      </p>
     </form>
   )
 }
