@@ -37,6 +37,23 @@ type RecipeParse = ReturnType<typeof RecipeSchema.safeParse>
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Calcula o próximo nome automático "vN" para uma família de versões.
+// A base sem nome conta como "v1" (ela vira "v1" ao criar a primeira versão),
+// evitando duplicação de nomes na primeira ramificação.
+async function nextVersionName(
+  famRows: Array<{ id: string; version_name: string | null }>,
+  rootVersionName: string | null
+): Promise<string> {
+  const nums = famRows
+    .map((row) =>
+      parseInt(String(row.version_name ?? "").replace(/\D/g, ""), 10)
+    )
+    .filter((n) => Number.isFinite(n))
+  if (!rootVersionName) nums.push(1)
+  const maxNum = nums.length > 0 ? Math.max(...nums) : 0
+  return `v${maxNum + 1}`
+}
+
 // FormData sempre entrega strings. Reconstrói os campos dinâmicos.
 function parseRecipeFormData(formData: FormData): RecipeParse {
   const title = String(formData.get("title") ?? "")
@@ -79,7 +96,17 @@ function parseRecipeFormData(formData: FormData): RecipeParse {
   })
 }
 
-function recipeFields(data: RecipePayload) {
+type RecipeFields = {
+  title: string
+  image_url: string | null
+  base_servings: number
+  prep_time_minutes: number
+  effort_level: number
+  instructions: Array<{ text: string }>
+  version_name?: string
+}
+
+function recipeFields(data: RecipePayload): RecipeFields {
   return {
     title: data.title,
     image_url: data.image_url,
@@ -133,6 +160,7 @@ export async function saveRecipe(
 
   const id = String(formData.get("id") ?? "").trim()
   const saveMode = String(formData.get("save_mode") ?? "create")
+  const versionName = String(formData.get("version_name") ?? "").trim()
 
   const parsed = parseRecipeFormData(formData)
   if (!parsed.success) {
@@ -141,11 +169,11 @@ export async function saveRecipe(
   const data = parsed.data as RecipePayload
 
   if (saveMode === "update") {
-    return updateRecipeCore(auth.supabase, id, data)
+    return updateRecipeCore(auth.supabase, id, data, versionName)
   }
 
   if (saveMode === "version") {
-    return createVersionCore(auth.supabase, auth.userId, id, data)
+    return createVersionCore(auth.supabase, auth.userId, id, data, versionName)
   }
 
   return createRecipeCore(auth.supabase, auth.userId, data)
@@ -191,11 +219,16 @@ async function createRecipeCore(
 async function updateRecipeCore(
   supabase: SupabaseClient,
   id: string,
-  data: RecipePayload
+  data: RecipePayload,
+  versionName: string
 ): Promise<FormState<{ id: string }>> {
+  const fields = recipeFields(data)
+  if (versionName !== "") {
+    fields.version_name = versionName
+  }
   const { error: updateError } = await supabase
     .from("recipes")
-    .update(recipeFields(data))
+    .update(fields)
     .eq("id", id)
 
   if (updateError) {
@@ -228,7 +261,8 @@ async function createVersionCore(
   supabase: SupabaseClient,
   userId: string,
   id: string,
-  data: RecipePayload
+  data: RecipePayload,
+  versionName: string
 ): Promise<FormState<{ id: string }>> {
   const { data: current, error: currentError } = await supabase
     .from("recipes")
@@ -252,13 +286,10 @@ async function createVersionCore(
     return { message: famError.message }
   }
 
-  const nums = (famRows ?? [])
-    .map((row) =>
-      parseInt(String(row.version_name ?? "").replace(/\D/g, ""), 10)
-    )
-    .filter((n) => Number.isFinite(n))
-  const maxNum = nums.length > 0 ? Math.max(...nums) : 0
-  const versionName = `v${maxNum + 1}`
+  const resolvedName =
+    versionName !== ""
+      ? versionName
+      : await nextVersionName(famRows ?? [], current.version_name)
 
   // A versão base passa a ser "v1" quando a primeira versão é criada.
   if (!current.version_name) {
@@ -277,7 +308,7 @@ async function createVersionCore(
       user_id: userId,
       ...recipeFields(data),
       parent_recipe_id: familyRootId,
-      version_name: versionName,
+      version_name: resolvedName,
     })
     .select("id")
     .single()

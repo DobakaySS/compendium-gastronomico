@@ -51,6 +51,8 @@ type RecipeBuilderProps = {
   recipeId?: string
   initialData?: RecipeFormValues
   submitLabel?: string
+  initialVersionName?: string
+  suggestedVersionName?: string
 }
 
 const DEFAULT_VALUES: RecipeFormValues = {
@@ -69,6 +71,8 @@ export function RecipeBuilder({
   recipeId,
   initialData,
   submitLabel = "Criar receita",
+  initialVersionName = "",
+  suggestedVersionName = "",
 }: RecipeBuilderProps) {
   const [state, formAction, pending] = useActionState<
     FormState<{ id: string }>,
@@ -76,6 +80,9 @@ export function RecipeBuilder({
   >(saveRecipe, null)
 
   const [saveMode, setSaveMode] = useState<"update" | "version">("update")
+
+  const [corrigirName, setCorrigirName] = useState(initialVersionName)
+  const [novaVersaoName, setNovaVersaoName] = useState(suggestedVersionName)
 
   const [ingredients, setIngredients] = useState<
     Array<Pick<Ingredient, "id" | "name" | "default_unit">>
@@ -245,6 +252,9 @@ export function RecipeBuilder({
       const fd = new FormData()
       fd.set("save_mode", mode === "edit" ? saveMode : "create")
       if (mode === "edit" && recipeId) fd.set("id", recipeId)
+      if (mode === "edit") {
+        fd.set("version_name", saveMode === "update" ? corrigirName : novaVersaoName)
+      }
       fd.set("title", values.title)
       fd.set("image_url", values.image_url ?? "")
       fd.set("base_servings", String(values.base_servings))
@@ -261,7 +271,7 @@ export function RecipeBuilder({
         formAction(fd)
       })
     },
-    [formAction, mode, recipeId, saveMode]
+    [formAction, mode, recipeId, saveMode, corrigirName, novaVersaoName]
   )
 
   return (
@@ -270,6 +280,36 @@ export function RecipeBuilder({
         <CardTitle>
           {mode === "edit" ? "Editar receita" : "Nova receita"}
         </CardTitle>
+        <Field orientation="vertical" className="mt-4">
+                <FieldLabel htmlFor="version_name">
+                  {saveMode === "update"
+                    ? "Nome da versão (renomear)"
+                    : "Nome da nova versão"}
+                </FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="version_name"
+                    placeholder={
+                      saveMode === "version"
+                        ? suggestedVersionName || "ex.: Vegana, Sem glúten..."
+                        : "Nome atual desta versão"
+                    }
+                    value={saveMode === "update" ? corrigirName : novaVersaoName}
+                    onChange={(e) =>
+                      saveMode === "update"
+                        ? setCorrigirName(e.target.value)
+                        : setNovaVersaoName(e.target.value)
+                    }
+                  />
+                </FieldContent>
+              </Field>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {saveMode === "update"
+                  ? initialVersionName
+                    ? `Renomeia esta versão (atual: "${initialVersionName}"). Em branco, o nome é mantido.`
+                    : "Define um nome para esta versão (ex.: V1, Original). Em branco, permanece sem nome."
+                  : `Nome de texto livre para a nova versão. Em branco, usa o automático ${suggestedVersionName || "vN"}.`}
+              </p>
         <CardDescription>
           Preencha os dados básicos, os passos e os ingredientes da receita.
         </CardDescription>
@@ -663,7 +703,7 @@ export function RecipeBuilder({
               <p className="mt-2 text-xs text-muted-foreground">
                 {saveMode === "update"
                   ? "Correção direta: atualiza esta receita, preservando o histórico das versões anteriores."
-                  : "Cria uma nova versão (vN) baseada nestes dados. A receita original é preservada e vira a versão base."}
+                  : "Cria uma nova versão baseada nestes dados. A receita original é preservada e vira a versão base."}
               </p>
             </div>
           )}
@@ -673,8 +713,8 @@ export function RecipeBuilder({
           </Button>
           <p className="text-xs text-muted-foreground">
             {mode === "edit"
-              ? "Receita salva na família de versões (Fase 2)."
-              : "Receita salva como versão base (preparada para versionamento na Fase 2)."}
+              ? "Receita salva na família de versões."
+              : "Receita salva como versão base"}
           </p>
         </CardFooter>
       </form>
