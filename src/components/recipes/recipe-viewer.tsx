@@ -94,6 +94,16 @@ export function RecipeViewer({
     })
   }, [activeVersion, ingredientsByVersion, pricesByCity, city])
 
+  const { missingPriceNames, incompleteTotal } = React.useMemo(() => {
+    const names = ingredients
+      .filter((ing) => ing.price == null)
+      .map((ing) => ing.name)
+    return {
+      missingPriceNames: names,
+      incompleteTotal: names.length > 0,
+    }
+  }, [ingredients])
+
   const hasPrices = ingredients.some((ing) => ing.price != null)
   const hasVersions = versions.length > 1
 
@@ -206,6 +216,9 @@ export function RecipeViewer({
           servings={macroServings}
           baseServings={baseServings}
           hasPrices={hasPrices}
+          city={city}
+          missingPriceNames={missingPriceNames}
+          incompleteTotal={incompleteTotal}
           onServingsChange={setMacroServings}
         />
       )}

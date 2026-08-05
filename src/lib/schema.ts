@@ -1,4 +1,5 @@
 import { z } from "zod"
+import dayjs from "dayjs"
 import { isQualitativeUnit } from "@/lib/units"
 
 // ---------------------------------------------------------------------------
@@ -205,6 +206,34 @@ export const ShoppingListSchema = z.object({
 })
 
 export type ShoppingListFormValues = z.infer<typeof ShoppingListSchema>
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Price registration
+// ---------------------------------------------------------------------------
+
+export const PriceLogSchema = z.object({
+  ingredient_id: z.string().uuid("Ingrediente inválido."),
+  city: z.string().min(1, "Informe a cidade."),
+  price: z
+    .number()
+    .positive("Preço deve ser maior que zero.")
+    .max(99999, "Preço muito alto."),
+  reference_amount: z
+    .number()
+    .positive("Quantidade deve ser maior que zero.")
+    .max(99999, "Quantidade muito alta."),
+  reference_unit: z.enum(["g", "kg", "ml", "L"], {
+    message: "Unidade inválida.",
+  }),
+  recorded_on: z
+    .string()
+    .min(1, "Informe a data.")
+    .refine((val) => dayjs(val, "YYYY-MM-DD", true).isValid(), {
+      message: "Data inválida. Use o formato AAAA-MM-DD.",
+    }),
+})
+
+export type PriceLogFormValues = z.infer<typeof PriceLogSchema>
 
 // ---------------------------------------------------------------------------
 // Phase 2 — Versioning & calculations

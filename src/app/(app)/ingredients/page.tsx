@@ -117,14 +117,22 @@ export default async function IngredientsPage() {
                     {formatMacro(ing.fat_per_100g)}g /100g
                   </p>
                 </div>
-                {writer && (
+                <div className="flex shrink-0 items-center gap-2">
                   <Link
-                    href={`/ingredients/${ing.id}/edit`}
-                    className="shrink-0 rounded-full border border-zinc-800 px-3 py-1.5 text-[0.65rem] tracking-[0.2em] uppercase text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-100"
+                    href={`/ingredients/${ing.id}`}
+                    className="rounded-full border border-zinc-800 px-3 py-1.5 text-[0.65rem] tracking-[0.2em] uppercase text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-100"
                   >
-                    Editar
+                    Ver
                   </Link>
-                )}
+                  {writer && (
+                    <Link
+                      href={`/ingredients/${ing.id}/edit`}
+                      className="rounded-full border border-zinc-800 px-3 py-1.5 text-[0.65rem] tracking-[0.2em] uppercase text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-100"
+                    >
+                      Editar
+                    </Link>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

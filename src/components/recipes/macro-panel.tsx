@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import Link from "next/link"
+import { MapPinIcon } from "lucide-react"
 import {
   calcMacroTotals,
   formatAmount,
@@ -15,6 +16,9 @@ type MacroPanelProps = {
   servings: number
   baseServings: number
   hasPrices: boolean
+  city: string
+  missingPriceNames: string[]
+  incompleteTotal: boolean
   onServingsChange: (value: number) => void
 }
 
@@ -30,6 +34,9 @@ export function MacroPanel({
   servings,
   baseServings,
   hasPrices,
+  city,
+  missingPriceNames,
+  incompleteTotal,
   onServingsChange,
 }: MacroPanelProps) {
   const totals = useMemo(
@@ -84,23 +91,63 @@ export function MacroPanel({
         )}
 
         {hasPrices && (
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
-              <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
-                Custo total
-              </p>
-              <p className="mt-1 font-heading text-2xl text-zinc-300">
-                {formatCurrency(totals.totalCost, totals.currency)}
-              </p>
+          <>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
+                <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
+                  Custo total
+                </p>
+                <p className="mt-1 font-heading text-2xl text-zinc-300">
+                  {formatCurrency(totals.totalCost, totals.currency)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
+                <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
+                  Custo por porção
+                </p>
+                <p className="mt-1 font-heading text-2xl text-zinc-300">
+                  {formatCurrency(totals.costPerServing, totals.currency)}
+                </p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
-              <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
-                Custo por porção
-              </p>
-              <p className="mt-1 font-heading text-2xl text-zinc-300">
-                {formatCurrency(totals.costPerServing, totals.currency)}
-              </p>
+
+            <div className="mt-3 flex items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1">
+                <MapPinIcon className="size-3 text-zinc-500" />
+                <span className="text-[0.65rem] tracking-[0.15em] uppercase text-zinc-400">
+                  Preços em {city}
+                </span>
+              </div>
             </div>
+
+            {incompleteTotal && missingPriceNames.length > 0 && (
+              <div className="mt-3 rounded-xl border border-amber-900/60 bg-amber-950/30 px-4 py-3 text-xs leading-relaxed text-amber-200/90">
+                <p className="font-medium text-amber-200">
+                  Preços incompletos em {city}. Sem registro de preço:{" "}
+                  {missingPriceNames.join(", ")}.
+                </p>
+                <Link
+                  href="/ingredients"
+                  className="mt-1 inline-block tracking-[0.15em] uppercase text-amber-300/80 underline underline-offset-4 transition-colors hover:text-amber-200"
+                >
+                  Cadastrar preços no catálogo
+                </Link>
+              </div>
+            )}
+          </>
+        )}
+
+        {!hasPrices && (
+          <div className="mt-3 flex items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1">
+              <MapPinIcon className="size-3 text-zinc-500" />
+              <span className="text-[0.65rem] tracking-[0.15em] uppercase text-zinc-400">
+                {city}
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Nenhum preço registrado para esta cidade.
+            </p>
           </div>
         )}
       </div>
