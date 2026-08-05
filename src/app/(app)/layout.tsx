@@ -27,8 +27,10 @@ export default async function AppLayout({
     })
     sections.push({
       label: "Receitas",
-      items: [{ href: "/recipes/new", label: "Nova receita" }, 
-        { href: "/recipes/smart-import", label: "Smart Import" }],
+      items: [{ href: "/", label: "Suas Receitas" },
+        { href: "/recipes/new", label: "Nova receita" }, 
+        { href: "/recipes/smart-import", label: "Smart Import" }
+        ],
     })
     sections.push({
       label: "Ingredientes",

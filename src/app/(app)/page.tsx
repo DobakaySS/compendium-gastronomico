@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { userRole, canWrite } from "@/lib/roles"
 import { loginAsVisitor } from "@/app/actions/auth"
 import { Button } from "@/components/ui/button"
-import { RecipeCard } from "@/components/recipes/recipe-card"
+import { RecipeCollection } from "@/components/recipes/recipe-collection"
 
 export const revalidate = 0
 
@@ -127,8 +127,8 @@ export default async function Home() {
             <p className="mb-4 text-[0.7rem] tracking-[0.3em] uppercase text-zinc-500">
               Recentes
             </p>
-            <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4">
-              {recipes.map((recipe) => {
+            <RecipeCollection
+              items={recipes.map((recipe) => {
                 const recipeRow = recipe as {
                   recipe_tags?: Array<{
                     tags?:
@@ -152,11 +152,18 @@ export default async function Home() {
                     (t): t is { id: string; name: string; color: string } =>
                       Boolean(t?.id && t.name && t.color)
                   )
-                return (
-                  <RecipeCard key={recipe.id} recipe={recipe} tags={tags} />
-                )
+                return {
+                  recipe: {
+                    id: recipe.id,
+                    title: recipe.title,
+                    image_url: recipe.image_url,
+                    base_servings: recipe.base_servings,
+                    prep_time_minutes: recipe.prep_time_minutes,
+                  },
+                  tags,
+                }
               })}
-            </div>
+            />
           </>
         )}
       </main>
