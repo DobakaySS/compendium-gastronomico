@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/field"
 import { Combobox, ComboboxMulti } from "@/components/ui/combobox"
 import { NewIngredientDialog } from "@/components/recipes/new-ingredient-dialog"
+import { RecipeImagePicker } from "@/components/recipes/recipe-image-picker"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { RECIPE_UNITS, isAmountlessUnit, isQualitativeUnit } from "@/lib/units"
@@ -54,6 +55,7 @@ type RecipeBuilderProps = {
 
 const DEFAULT_VALUES: RecipeFormValues = {
   title: "",
+  image_url: null,
   base_servings: 4,
   prep_time_minutes: 30,
   effort_level: 3,
@@ -244,6 +246,7 @@ export function RecipeBuilder({
       fd.set("save_mode", mode === "edit" ? saveMode : "create")
       if (mode === "edit" && recipeId) fd.set("id", recipeId)
       fd.set("title", values.title)
+      fd.set("image_url", values.image_url ?? "")
       fd.set("base_servings", String(values.base_servings))
       fd.set("prep_time_minutes", String(values.prep_time_minutes))
       fd.set("effort_level", String(values.effort_level))
@@ -275,6 +278,18 @@ export function RecipeBuilder({
         <CardContent className="flex flex-col gap-6">
           {/* Básicos */}
           <div className="flex flex-col gap-4">
+            <Field orientation="vertical">
+              <FieldLabel>Imagem (opcional)</FieldLabel>
+              <FieldContent>
+                <RecipeImagePicker
+                  value={getValues("image_url")}
+                  onChange={(url) =>
+                    setValue("image_url", url, { shouldValidate: true })
+                  }
+                />
+              </FieldContent>
+            </Field>
+
             <Field orientation="vertical">
               <FieldLabel htmlFor="title">Título</FieldLabel>
               <FieldContent>

@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { useCity } from "@/components/providers/city-provider"
 import { ServingSlider } from "@/components/recipes/serving-slider"
 import { MacroPanel } from "@/components/recipes/macro-panel"
-import { PantryCheckDialog } from "@/components/recipes/pantry-check-dialog"
+import { ShoppingListDialog } from "@/components/recipes/shopping-list-dialog"
 import {
   calcRatio,
   calcScaledAmount,
@@ -127,14 +127,23 @@ export function RecipeViewer({
       {/* Ingredientes escalados (resize da receita) */}
       {activeVersion && (
         <section>
-          <div className="mb-4 flex items-baseline justify-between gap-4">
+          <div className="mb-4 flex items-center justify-between gap-4">
             <h2 className="text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
               Ingredientes
             </h2>
-            <span className="text-[0.7rem] tracking-[0.2em] uppercase text-zinc-400">
-              {ingredientServings}{" "}
-              {ingredientServings === 1 ? "porção" : "porções"}
-            </span>
+            <div className="flex items-center gap-3">
+              <ShoppingListDialog
+                recipeId={activeVersion.id}
+                recipeTitle={activeVersion.title}
+                ingredients={ingredients}
+                servings={ingredientServings}
+                baseServings={baseServings}
+              />
+              <span className="text-[0.7rem] tracking-[0.2em] uppercase text-zinc-400">
+                {ingredientServings}{" "}
+                {ingredientServings === 1 ? "porção" : "porções"}
+              </span>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
@@ -187,17 +196,6 @@ export function RecipeViewer({
           </section>
         </>
       )}
-
-      {/* Pantry Check */}
-      <Separator className="bg-zinc-800" />
-      <section>
-        <PantryCheckDialog
-          ingredients={ingredients}
-          servings={ingredientServings}
-          baseServings={baseServings}
-          hasPrices={hasPrices}
-        />
-      </section>
 
       {/* Análise nutricional — última coisa da página */}
       <Separator className="bg-zinc-800" />

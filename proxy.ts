@@ -7,6 +7,7 @@ const protectedRoutes = [
   "/ingredients",
   "/authors",
   "/recipes",
+  "/shopping",
   "/admin",
 ]
 const writeRoutes = [

@@ -18,6 +18,7 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 type RecipePayload = {
   title: string
+  image_url: string | null
   base_servings: number
   prep_time_minutes: number
   effort_level: number
@@ -39,6 +40,8 @@ type RecipeParse = ReturnType<typeof RecipeSchema.safeParse>
 // FormData sempre entrega strings. Reconstrói os campos dinâmicos.
 function parseRecipeFormData(formData: FormData): RecipeParse {
   const title = String(formData.get("title") ?? "")
+  const rawImageUrl = String(formData.get("image_url") ?? "").trim()
+  const image_url = rawImageUrl === "" ? null : rawImageUrl
   const base_servings = Number(String(formData.get("base_servings") ?? ""))
   const prep_time_minutes = Number(String(formData.get("prep_time_minutes") ?? ""))
   const effort_level = Number(String(formData.get("effort_level") ?? ""))
@@ -66,6 +69,7 @@ function parseRecipeFormData(formData: FormData): RecipeParse {
 
   return RecipeSchema.safeParse({
     title,
+    image_url,
     base_servings,
     prep_time_minutes,
     effort_level,
@@ -78,6 +82,7 @@ function parseRecipeFormData(formData: FormData): RecipeParse {
 function recipeFields(data: RecipePayload) {
   return {
     title: data.title,
+    image_url: data.image_url,
     base_servings: data.base_servings,
     prep_time_minutes: data.prep_time_minutes,
     effort_level: data.effort_level,

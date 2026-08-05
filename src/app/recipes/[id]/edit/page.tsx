@@ -10,6 +10,7 @@ import type { RecipeFormValues } from "@/lib/schema"
 type RecipeRow = {
   id: string
   title: string
+  image_url: string | null
   base_servings: number | null
   prep_time_minutes: number | null
   effort_level: number | null
@@ -42,6 +43,7 @@ export default async function EditRecipePage({
     .select(
       `id,
        title,
+       image_url,
        base_servings,
        prep_time_minutes,
        effort_level,
@@ -60,6 +62,7 @@ export default async function EditRecipePage({
 
   const initialData: RecipeFormValues = {
     title: row.title,
+    image_url: row.image_url,
     base_servings: Number(row.base_servings ?? 4),
     prep_time_minutes: Number(row.prep_time_minutes ?? 30),
     effort_level: Number(row.effort_level ?? 3),

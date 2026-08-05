@@ -67,6 +67,24 @@ export type RecipeAuthor = {
   author_id: string
 }
 
+export type ShoppingList = {
+  id: string
+  user_id: string
+  recipe_id: string | null
+  title: string
+  servings: number | null
+  created_at: string
+}
+
+export type ShoppingListItem = {
+  id: string
+  shopping_list_id: string
+  ingredient_id: string
+  amount: number
+  unit: string
+  checked: boolean
+}
+
 // ---------------------------------------------------------------------------
 // Reusable field schemas
 // ---------------------------------------------------------------------------
@@ -132,6 +150,7 @@ export const IngredientLineSchema = z
 
 export const RecipeSchema = z.object({
   title: requiredName,
+  image_url: z.string().nullable(),
   base_servings: z.number().min(1, "Entre 1 e 100 porções.").max(100, "Entre 1 e 100 porções."),
   prep_time_minutes: z.number().min(0, "Tempo entre 0 e 1440 min.").max(1440, "Tempo entre 0 e 1440 min."),
   effort_level: z.number().min(1, "Esforço entre 1 e 5.").max(5, "Esforço entre 1 e 5."),
@@ -148,6 +167,30 @@ export type AuthorFormValues = z.infer<typeof AuthorSchema>
 export type IngredientFormValues = z.infer<typeof IngredientSchema>
 export type RecipeFormValues = z.infer<typeof RecipeSchema>
 export type IngredientLineValues = z.infer<typeof IngredientLineSchema>
+
+// ---------------------------------------------------------------------------
+// Phase 3 — Listas de compras
+// ---------------------------------------------------------------------------
+
+export const ShoppingListItemSchema = z.object({
+  ingredient_id: z.string().min(1, "Ingrediente inválido."),
+  amount: z
+    .number()
+    .positive("Quantidade deve ser maior que zero.")
+    .max(100000, "Quantidade muito alta."),
+  unit: z.string().min(1, "Informe a unidade."),
+})
+
+export const ShoppingListSchema = z.object({
+  recipe_id: z.string().min(1, "Receita inválida."),
+  title: z.string().min(1, "Informe um título.").max(200, "Título muito longo."),
+  servings: z.number().min(1, "Entre 1 e 100 porções.").max(100, "Entre 1 e 100 porções."),
+  items: z
+    .array(ShoppingListItemSchema)
+    .min(1, "Adicione ao menos um item à lista."),
+})
+
+export type ShoppingListFormValues = z.infer<typeof ShoppingListSchema>
 
 // ---------------------------------------------------------------------------
 // Phase 2 — Versioning & calculations
