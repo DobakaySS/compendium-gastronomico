@@ -10,6 +10,7 @@ import { PantryCheckDialog } from "@/components/recipes/pantry-check-dialog"
 import {
   calcRatio,
   calcScaledAmount,
+  formatAmount,
   formatIngredientAmount,
   type ViewerIngredient,
 } from "@/lib/calculations"
@@ -58,12 +59,20 @@ export function RecipeViewer({
 
   const activeVersion = versions.find((v) => v.id === versionId) ?? versions[0]
 
-  // Slider de porções — sincroniza ao trocar de versão (default base_servings)
+  // Slider de ingredientes — resize da receita (default: porção cadastrada)
   const baseServings = activeVersion?.base_servings ?? 1
-  const [servings, setServings] = React.useState(baseServings)
+  const [ingredientServings, setIngredientServings] =
+    React.useState(baseServings)
 
+  // Slider de macros — análise nutricional (default: 1 porção)
+  const [macroServings, setMacroServings] = React.useState(1)
+
+  // Reseta os sliders ao trocar de versão
   React.useEffect(() => {
-    const t = window.setTimeout(() => setServings(baseServings), 0)
+    const t = window.setTimeout(() => {
+      setIngredientServings(baseServings)
+      setMacroServings(1)
+    }, 0)
     return () => window.clearTimeout(t)
   }, [baseServings])
 
@@ -88,12 +97,12 @@ export function RecipeViewer({
   const hasVersions = versions.length > 1
 
   const scaledIngredients = React.useMemo(() => {
-    const ratio = calcRatio(servings, baseServings)
+    const ratio = calcRatio(ingredientServings, baseServings)
     return ingredients.map((ing) => ({
       ...ing,
       scaled: calcScaledAmount(ing.amount_used, ratio),
     }))
-  }, [ingredients, servings, baseServings])
+  }, [ingredients, ingredientServings, baseServings])
 
   return (
     <div className="mt-10 flex flex-col gap-10">
@@ -115,44 +124,43 @@ export function RecipeViewer({
         </section>
       )}
 
-      {/* Slider de porções */}
-      <section>
-        <ServingSlider
-          value={servings}
-          onChange={setServings}
-          baseServings={baseServings}
-        />
-      </section>
-
-      {/* Painel de macros e custos */}
-      {activeVersion && (
-        <MacroPanel
-          ingredients={ingredients}
-          servings={servings}
-          baseServings={baseServings}
-          hasPrices={hasPrices}
-        />
-      )}
-
-      {/* Ingredientes escalados */}
+      {/* Ingredientes escalados (resize da receita) */}
       {activeVersion && (
         <section>
-          <h2 className="mb-4 text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
-            Ingredientes
-          </h2>
-          <ul className="space-y-4">
-            {scaledIngredients.map((item, i) => (
-              <li
-                key={`${item.id}-${i}`}
-                className="flex items-baseline justify-between gap-4 border-b border-zinc-800/70 pb-3"
-              >
-                <span className="text-sm text-zinc-100">{item.name}</span>
-                <span className="shrink-0 text-sm text-zinc-400">
-                  {formatIngredientAmount(item.scaled, item.unit)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-4 flex items-baseline justify-between gap-4">
+            <h2 className="text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
+              Ingredientes
+            </h2>
+            <span className="text-[0.7rem] tracking-[0.2em] uppercase text-zinc-400">
+              {ingredientServings}{" "}
+              {ingredientServings === 1 ? "porção" : "porções"}
+            </span>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+            <ServingSlider
+              value={ingredientServings}
+              onChange={setIngredientServings}
+            />
+            <p className="mt-3 text-xs text-zinc-500">
+              Base cadastrada: {formatAmount(baseServings)} porções · ajuste
+              para redimensionar as quantidades
+            </p>
+
+            <ul className="mt-5 space-y-4">
+              {scaledIngredients.map((item, i) => (
+                <li
+                  key={`${item.id}-${i}`}
+                  className="flex items-baseline justify-between gap-4 border-b border-zinc-800/70 pb-3"
+                >
+                  <span className="text-sm text-zinc-100">{item.name}</span>
+                  <span className="shrink-0 text-sm text-zinc-400">
+                    {formatIngredientAmount(item.scaled, item.unit)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       )}
 
@@ -185,11 +193,23 @@ export function RecipeViewer({
       <section>
         <PantryCheckDialog
           ingredients={ingredients}
-          servings={servings}
+          servings={ingredientServings}
           baseServings={baseServings}
           hasPrices={hasPrices}
         />
       </section>
+
+      {/* Análise nutricional — última coisa da página */}
+      <Separator className="bg-zinc-800" />
+      {activeVersion && (
+        <MacroPanel
+          ingredients={ingredients}
+          servings={macroServings}
+          baseServings={baseServings}
+          hasPrices={hasPrices}
+          onServingsChange={setMacroServings}
+        />
+      )}
     </div>
   )
 }

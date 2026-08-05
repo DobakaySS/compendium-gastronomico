@@ -7,12 +7,14 @@ import {
   formatCurrency,
   type ViewerIngredient,
 } from "@/lib/calculations"
+import { ServingSlider } from "@/components/recipes/serving-slider"
 
 type MacroPanelProps = {
   ingredients: ViewerIngredient[]
   servings: number
   baseServings: number
   hasPrices: boolean
+  onServingsChange: (value: number) => void
 }
 
 const MACRO_ITEMS = [
@@ -27,6 +29,7 @@ export function MacroPanel({
   servings,
   baseServings,
   hasPrices,
+  onServingsChange,
 }: MacroPanelProps) {
   const totals = useMemo(
     () => calcMacroTotals(ingredients, servings, baseServings),
@@ -39,43 +42,52 @@ export function MacroPanel({
         Análise nutricional
       </h2>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {MACRO_ITEMS.map(({ key, label, unit }) => (
-          <div
-            key={key}
-            className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3"
-          >
-            <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
-              {label}
-            </p>
-            <p className="mt-1 font-heading text-2xl text-zinc-300">
-              {formatAmount(totals[key])}
-              <span className="ml-1 text-xs text-zinc-500">{unit}</span>
-            </p>
-          </div>
-        ))}
-      </div>
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+        <ServingSlider value={servings} onChange={onServingsChange} />
 
-      {hasPrices && (
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
-            <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
-              Custo total
-            </p>
-            <p className="mt-1 font-heading text-2xl text-zinc-300">
-              {formatCurrency(totals.totalCost, totals.currency)}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
-            <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
-              Custo por porção
-            </p>
-            <p className="mt-1 font-heading text-2xl text-zinc-300">
-              {formatCurrency(totals.costPerServing, totals.currency)}
-            </p>
-          </div>
+        <p className="mt-3 text-xs text-zinc-500">
+          Valores referentes a {servings}{" "}
+          {servings === 1 ? "porção" : "porções"}
+        </p>
+
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {MACRO_ITEMS.map(({ key, label, unit }) => (
+            <div
+              key={key}
+              className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3"
+            >
+              <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
+                {label}
+              </p>
+              <p className="mt-1 font-heading text-2xl text-zinc-300">
+                {formatAmount(totals[key])}
+                <span className="ml-1 text-xs text-zinc-500">{unit}</span>
+              </p>
+            </div>
+          ))}
         </div>
-      )}
+
+        {hasPrices && (
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
+              <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
+                Custo total
+              </p>
+              <p className="mt-1 font-heading text-2xl text-zinc-300">
+                {formatCurrency(totals.totalCost, totals.currency)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
+              <p className="text-[0.65rem] tracking-[0.2em] uppercase text-zinc-500">
+                Custo por porção
+              </p>
+              <p className="mt-1 font-heading text-2xl text-zinc-300">
+                {formatCurrency(totals.costPerServing, totals.currency)}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </section>
   )
 }
