@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { isQualitativeUnit } from "@/lib/units"
 
 // ---------------------------------------------------------------------------
 // Types (Supabase relational schema)
@@ -91,27 +92,43 @@ export const AuthorSchema = z.object({
   name: requiredName,
 })
 
-export const IngredientSchema = z.object({
-  name: requiredName,
-  default_unit: z.string().min(1, "Escolha a unidade padrão."),
-  kcal_per_100g: optionalMacro,
-  protein_per_100g: optionalMacro,
-  carbs_per_100g: optionalMacro,
-  fat_per_100g: optionalMacro,
-})
+export const IngredientSchema = z
+  .object({
+    name: requiredName,
+    default_unit: z
+      .string()
+      .min(1, "Escolha a unidade padrão.")
+      .refine((u) => !isQualitativeUnit(u), {
+        message: "Use uma unidade mensurável como padrão.",
+      }),
+    kcal_per_100g: optionalMacro,
+    protein_per_100g: optionalMacro,
+    carbs_per_100g: optionalMacro,
+    fat_per_100g: optionalMacro,
+  })
 
 export const InstructionStepSchema = z.object({
   text: z.string().min(1, "Passo não pode ser vazio."),
 })
 
-export const IngredientLineSchema = z.object({
-  ingredient_id: z.string().min(1, "Escolha um ingrediente."),
-  amount_used: z
-    .number()
-    .positive("Quantidade deve ser maior que zero.")
-    .max(100000, "Quantidade muito alta."),
-  unit: z.string().min(1, "Informe a unidade."),
-})
+export const IngredientLineSchema = z
+  .object({
+    ingredient_id: z.string().min(1, "Escolha um ingrediente."),
+    amount_used: z
+      .number()
+      .nonnegative("Quantidade não pode ser negativa.")
+      .max(100000, "Quantidade muito alta."),
+    unit: z.string().min(1, "Informe a unidade."),
+  })
+  .superRefine((val, ctx) => {
+    if (!isQualitativeUnit(val.unit) && val.amount_used <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["amount_used"],
+        message: "Quantidade deve ser maior que zero.",
+      })
+    }
+  })
 
 export const RecipeSchema = z.object({
   title: requiredName,

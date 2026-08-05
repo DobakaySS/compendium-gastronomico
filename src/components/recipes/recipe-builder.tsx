@@ -36,9 +36,10 @@ import {
 import { Combobox, ComboboxMulti } from "@/components/ui/combobox"
 import { NewIngredientDialog } from "@/components/recipes/new-ingredient-dialog"
 import { Separator } from "@/components/ui/separator"
+import { RECIPE_UNITS, isQualitativeUnit } from "@/lib/units"
 import { PlusIcon, Trash2Icon } from "lucide-react"
 
-const UNITS = ["g", "kg", "ml", "l", "unidade", "xícara", "colher (sopa)", "colher (chá)"] as const
+const UNITS = RECIPE_UNITS
 
 const EFFORT_LABELS = ["Muito fácil", "Fácil", "Médio", "Difícil", "Muito difícil"]
 
@@ -154,8 +155,17 @@ export function RecipeBuilder({
     (ingredient) => ingredient.id === pendingIngredientId
   )
 
+  const pendingUnitIsQualitative = isQualitativeUnit(pendingUnit)
+
   const addIngredientToList = () => {
-    const project = { ingredient_id: pendingIngredientId, amount_used: Number(pendingAmount) || 0, unit: pendingUnit }
+    const amount = pendingUnitIsQualitative
+      ? 0
+      : Number(pendingAmount) || 0
+    const project = {
+      ingredient_id: pendingIngredientId,
+      amount_used: amount,
+      unit: pendingUnit,
+    }
     ingredientsArray.append(project)
     setPendingIngredientId("")
     setPendingAmount("")
@@ -166,6 +176,11 @@ export function RecipeBuilder({
     setPendingIngredientId(value)
     const ingredient = ingredients.find((ingredient) => ingredient.id === value)
     if (ingredient?.default_unit) setPendingUnit(ingredient.default_unit)
+  }
+
+  const onPendingUnitChange = (value: string) => {
+    setPendingUnit(value)
+    if (isQualitativeUnit(value)) setPendingAmount("")
   }
 
   const handleIngredientCreated = (id: string) => {
@@ -360,16 +375,22 @@ export function RecipeBuilder({
                       min={0}
                       step="0.1"
                       inputMode="decimal"
-                      placeholder="0"
+                      placeholder={pendingUnitIsQualitative ? "Sem quantidade" : "0"}
+                      disabled={pendingUnitIsQualitative}
                       value={pendingAmount}
                       onChange={(e) => setPendingAmount(e.target.value)}
                     />
+                    {pendingUnitIsQualitative && (
+                      <p className="mt-1 text-[0.65rem] text-zinc-500">
+                        Sem quantidade — não entra nos macros.
+                      </p>
+                    )}
                   </FieldContent>
                 </Field>
                 <Field orientation="vertical">
                   <FieldLabel>Unidade</FieldLabel>
                   <FieldContent>
-                    <Select value={pendingUnit} onValueChange={(v) => setPendingUnit(v ?? "")}>
+                    <Select value={pendingUnit} onValueChange={(v) => onPendingUnitChange(v ?? "")}>
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
@@ -388,7 +409,10 @@ export function RecipeBuilder({
                 type="button"
                 variant="outline"
                 className="self-start"
-                disabled={!pendingIngredientId || !pendingAmount}
+                disabled={
+                  !pendingIngredientId ||
+                  (!pendingUnitIsQualitative && !pendingAmount)
+                }
                 onClick={addIngredientToList}
               >
                 <PlusIcon /> Adicionar à lista
@@ -405,7 +429,9 @@ export function RecipeBuilder({
                     <span className="flex-1">
                       {ingredientOptions.find((o) => o.value === field.ingredient_id)?.label ?? "Ingrediente"}
                       <span className="ml-2 text-muted-foreground">
-                        {field.amount_used} {field.unit}
+                        {isQualitativeUnit(field.unit)
+                          ? field.unit
+                          : `${field.amount_used} ${field.unit}`}
                       </span>
                     </span>
                     <Button

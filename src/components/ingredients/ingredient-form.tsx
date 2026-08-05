@@ -29,9 +29,10 @@ import {
 } from "@/components/ui/card"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
 import { Controller } from "react-hook-form"
+import { MEASURABLE_UNITS } from "@/lib/units"
 import { SparklesIcon } from "lucide-react"
 
-const UNITS = ["g", "kg", "ml", "l", "unidade", "xícara", "colher (sopa)", "colher (chá)"] as const
+const UNITS = MEASURABLE_UNITS
 
 type IngredientFormProps = {
   mode?: "create" | "edit"

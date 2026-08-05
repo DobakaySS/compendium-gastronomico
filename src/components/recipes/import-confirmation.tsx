@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Combobox } from "@/components/ui/combobox"
 import { createClient } from "@/lib/supabase/client"
+import { MEASURABLE_UNITS, isQualitativeUnit } from "@/lib/units"
+import { formatIngredientAmount } from "@/lib/calculations"
 import {
   saveSmartImport,
   type ParseResult,
@@ -30,16 +32,7 @@ type Props = {
   parsed: ParseResult
 }
 
-const UNITS = [
-  "g",
-  "kg",
-  "ml",
-  "l",
-  "unidade",
-  "xícara",
-  "colher (sopa)",
-  "colher (chá)",
-] as const
+const UNITS = MEASURABLE_UNITS
 
 const CREATE_NEW_VALUE = "__create_new__"
 
@@ -89,7 +82,8 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
             selectedId: firstId,
             createNew: false,
             newName: ing.ai_name,
-            newUnit: ing.unit,
+            // Unidades qualitativas não podem ser a unidade padrão do ingrediente.
+            newUnit: isQualitativeUnit(ing.unit) ? "g" : ing.unit,
           }
         }
       })
@@ -285,9 +279,14 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
                       <span className="text-sm text-zinc-100">
                         {ing.ai_name}
                       </span>
+                      {isQualitativeUnit(ing.unit) && (
+                        <Badge variant="outline" className="text-[0.6rem]">
+                          sem macros
+                        </Badge>
+                      )}
                     </div>
                     <span className="text-xs text-zinc-500">
-                      DB: {ing.db_ingredient.name}
+                      {formatIngredientAmount(ing.amount_used, ing.unit)}
                     </span>
                   </li>
                 ))}
@@ -303,9 +302,14 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
                     <div className="mb-2 flex items-baseline justify-between gap-2">
                       <span className="text-sm text-zinc-100">
                         {ing.ai_name}
+                        {isQualitativeUnit(ing.unit) && (
+                          <Badge variant="outline" className="ml-2 text-[0.6rem]">
+                            sem macros
+                          </Badge>
+                        )}
                       </span>
                       <span className="text-xs text-zinc-500">
-                        {ing.amount_used} {ing.unit}
+                        {formatIngredientAmount(ing.amount_used, ing.unit)}
                       </span>
                     </div>
 

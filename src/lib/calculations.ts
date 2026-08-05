@@ -5,6 +5,8 @@
 // do slider, retornando os totais escalados.
 // ---------------------------------------------------------------------------
 
+import { isQualitativeUnit } from "@/lib/units"
+
 export type ViewerIngredient = {
   id: string
   name: string
@@ -64,6 +66,13 @@ export function formatAmount(value: number): string {
   }).format(round(value))
 }
 
+// Exibe a quantidade de um ingrediente. Unidades qualitativas ("a gosto",
+// "pitada", "gotas") mostram apenas a unidade, sem número.
+export function formatIngredientAmount(amount: number, unit: string): string {
+  if (isQualitativeUnit(unit)) return unit
+  return `${formatAmount(amount)} ${unit}`
+}
+
 // Ratio = current_servings / base_servings
 export function calcRatio(servings: number, baseServings: number): number {
   if (!baseServings || baseServings <= 0) return 1
@@ -109,6 +118,8 @@ export function calcMacroTotals(
     ingredients.find((ing) => ing.currency)?.currency ?? "BRL"
 
   for (const ing of ingredients) {
+    // Ingredientes "a gosto"/"pitada"/"gotas" não entram nos macros e custos.
+    if (isQualitativeUnit(ing.unit)) continue
     const scaled = calcScaledAmount(ing.amount_used, ratio)
     kcal += calcIngredientMacro(scaled, ing.kcal_per_100g)
     protein += calcIngredientMacro(scaled, ing.protein_per_100g)
@@ -137,20 +148,22 @@ export function calcPantryLines(
 ): PantryLine[] {
   const ratio = calcRatio(servings, baseServings)
 
-  return ingredients.map((ing) => {
-    const required = calcScaledAmount(ing.amount_used, ratio)
-    const inStock = inStockByIngredientId[ing.id] ?? 0
-    const missing = Math.max(0, required - inStock)
-    return {
-      ingredient: ing,
-      required,
-      inStock,
-      missing,
-      missingCost: calcIngredientCost(
+  return ingredients
+    .filter((ing) => !isQualitativeUnit(ing.unit))
+    .map((ing) => {
+      const required = calcScaledAmount(ing.amount_used, ratio)
+      const inStock = inStockByIngredientId[ing.id] ?? 0
+      const missing = Math.max(0, required - inStock)
+      return {
+        ingredient: ing,
+        required,
+        inStock,
         missing,
-        ing.price,
-        ing.reference_amount
-      ),
-    }
-  })
+        missingCost: calcIngredientCost(
+          missing,
+          ing.price,
+          ing.reference_amount
+        ),
+      }
+    })
 }

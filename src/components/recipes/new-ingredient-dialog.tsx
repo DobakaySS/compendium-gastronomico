@@ -27,17 +27,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { MEASURABLE_UNITS } from "@/lib/units"
 
-const UNITS = [
-  "g",
-  "kg",
-  "ml",
-  "l",
-  "unidade",
-  "xícara",
-  "colher (sopa)",
-  "colher (chá)",
-] as const
+const UNITS = MEASURABLE_UNITS
 
 type Props = {
   open: boolean

@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requireRole } from "@/lib/crud"
+import { isQualitativeUnit } from "@/lib/units"
 import type { Ingredient } from "@/lib/schema"
 
 // ---------------------------------------------------------------------------
@@ -151,6 +152,14 @@ function normalizeAiMacros(value: unknown): AiMacros {
   }
 }
 
+// Normaliza a unidade retornada pela IA para o vocabulário do app.
+function normalizeUnit(raw: unknown): string {
+  const unit = String(raw ?? "g").trim().toLowerCase()
+  if (unit === "à gosto" || unit === "q.b." || unit === "qb") return "a gosto"
+  if (unit === "pitada" || unit === "gotas") return unit
+  return unit
+}
+
 function normalizeAiIngredients(value: unknown): AiIngredient[] {
   if (!Array.isArray(value)) return []
   return value
@@ -158,12 +167,14 @@ function normalizeAiIngredients(value: unknown): AiIngredient[] {
       if (!i || typeof i !== "object") return null
       const o = i as Record<string, unknown>
       const name = String(o.name ?? "").trim()
+      const unit = normalizeUnit(o.unit)
       const amount = toNum(o.amount_used, 0)
-      const unit = String(o.unit ?? "g").trim()
-      if (!name || amount <= 0) return null
+      if (!name) return null
+      // Unidades qualitativas não têm quantidade; aceita 0.
+      if (amount <= 0 && !isQualitativeUnit(unit)) return null
       return {
         name,
-        amount_used: amount,
+        amount_used: isQualitativeUnit(unit) ? 0 : amount,
         unit,
         macros: normalizeAiMacros(o.macros_per_100g),
       }
@@ -190,8 +201,8 @@ Siga estritamente este schema:
   "ingredients": [
     {
       "name": "string (nome do ingrediente)",
-      "amount_used": number (quantidade, ex: 500),
-      "unit": "string (unidade: g, kg, ml, l, unidade, xícara, colher (sopa), colher (chá))",
+      "amount_used": number (quantidade, ex: 500; use 0 quando a medida for qualitativa),
+      "unit": "string (unidade: g, kg, ml, l, unidade, xícara, colher (sopa), colher (chá), a gosto, pitada, gotas)",
       "macros_per_100g": {
         "kcal_per_100g": number|null (kcal por 100g, null se desconhecer),
         "protein_per_100g": number|null (g por 100g),
@@ -205,6 +216,7 @@ Siga estritamente este schema:
 Regras:
 - Instruções DEVEM ser array de objetos {"text": "..."}, um por passo.
 - Ingredientes DEVEM ser array de objetos com name, amount_used, unit.
+- Quando a quantidade no texto da receita for "a gosto", "pitada", "gotas" (ou "à gosto", "q.b."), use a unidade correspondente e amount_used = 0.
 - Retorne APENAS o JSON, sem texto introdutório.`
 
 // ---------------------------------------------------------------------------
@@ -430,11 +442,15 @@ export async function saveSmartImport(
         carbs_per_100g: null,
         fat_per_100g: null,
       }
+      // Unidades qualitativas não podem ser a unidade padrão do ingrediente.
+      const defaultUnit = isQualitativeUnit(ci.create_new.default_unit)
+        ? "g"
+        : ci.create_new.default_unit
       const { data: created, error: createErr } = await supabase
         .from("ingredients")
         .insert({
           name: ci.create_new.name,
-          default_unit: ci.create_new.default_unit,
+          default_unit: defaultUnit,
           kcal_per_100g: macros.kcal_per_100g,
           protein_per_100g: macros.protein_per_100g,
           carbs_per_100g: macros.carbs_per_100g,

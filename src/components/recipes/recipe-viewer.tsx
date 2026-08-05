@@ -10,7 +10,7 @@ import { PantryCheckDialog } from "@/components/recipes/pantry-check-dialog"
 import {
   calcRatio,
   calcScaledAmount,
-  formatAmount,
+  formatIngredientAmount,
   type ViewerIngredient,
 } from "@/lib/calculations"
 import type { RecipeVersion } from "@/lib/schema"
@@ -148,7 +148,7 @@ export function RecipeViewer({
               >
                 <span className="text-sm text-zinc-100">{item.name}</span>
                 <span className="shrink-0 text-sm text-zinc-400">
-                  {formatAmount(item.scaled)} {item.unit}
+                  {formatIngredientAmount(item.scaled, item.unit)}
                 </span>
               </li>
             ))}
