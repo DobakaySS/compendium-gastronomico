@@ -10,6 +10,7 @@ type IngredientRow = {
   id: string
   name: string
   default_unit: string | null
+  grams_per_unit: number | null
   kcal_per_100g: number | null
   protein_per_100g: number | null
   carbs_per_100g: number | null
@@ -34,7 +35,7 @@ export default async function EditIngredientPage({
   const { data: ingredient, error } = await supabase
     .from("ingredients")
     .select(
-      "id, name, default_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g"
+      "id, name, default_unit, grams_per_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g"
     )
     .eq("id", id)
     .maybeSingle()
@@ -48,6 +49,7 @@ export default async function EditIngredientPage({
     id: row.id,
     name: row.name,
     default_unit: row.default_unit ?? "g",
+    grams_per_unit: row.grams_per_unit != null ? Number(row.grams_per_unit) : null,
     kcal_per_100g: row.kcal_per_100g != null ? Number(row.kcal_per_100g) : null,
     protein_per_100g: row.protein_per_100g != null ? Number(row.protein_per_100g) : null,
     carbs_per_100g: row.carbs_per_100g != null ? Number(row.carbs_per_100g) : null,

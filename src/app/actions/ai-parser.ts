@@ -33,6 +33,7 @@ export type MatchedIngredient = {
   unit: string
   match_type: "exact"
   macros: AiMacros
+  grams_per_unit: number | null
   db_ingredient: Pick<Ingredient, "id" | "name" | "default_unit">
 }
 
@@ -42,6 +43,7 @@ export type UnmatchedIngredient = {
   unit: string
   match_type: "unmatched"
   macros: AiMacros
+  grams_per_unit: number | null
   suggestions: Array<
     Pick<Ingredient, "id" | "name" | "default_unit">
   >
@@ -63,7 +65,12 @@ export type ConfirmedIngredient = {
   amount_used: number
   unit: string
   ingredient_id?: string
-  create_new?: { name: string; default_unit: string; macros?: AiMacros }
+  create_new?: {
+    name: string
+    default_unit: string
+    macros?: AiMacros
+    grams_per_unit?: number | null
+  }
 }
 
 export type SaveImportPayload = {
@@ -133,6 +140,7 @@ type AiIngredient = {
   amount_used: number
   unit: string
   macros: AiMacros
+  grams_per_unit: number | null
 }
 
 function normalizeAiMacros(value: unknown): AiMacros {
@@ -177,6 +185,7 @@ function normalizeAiIngredients(value: unknown): AiIngredient[] {
         amount_used: isAmountlessUnit(unit) ? 0 : amount,
         unit,
         macros: normalizeAiMacros(o.macros_per_100g),
+        grams_per_unit: toOptionalNum(o.grams_per_unit),
       }
     })
     .filter(Boolean) as AiIngredient[]
@@ -203,6 +212,7 @@ Siga estritamente este schema:
       "name": "string (nome do ingrediente)",
       "amount_used": number (quantidade, ex: 500; use 0 para "a gosto"),
       "unit": "string (unidade: g, kg, ml, l, unidade, xícara, colher (sopa), colher (chá), a gosto, pitada, gotas)",
+      "grams_per_unit": number|null (média de gramas por unidade quando unit é "unidade", ex: 120 para tomate médio; null caso contrário),
       "macros_per_100g": {
         "kcal_per_100g": number|null (kcal por 100g, null se desconhecer),
         "protein_per_100g": number|null (g por 100g),
@@ -218,6 +228,7 @@ Regras:
 - Ingredientes DEVEM ser array de objetos com name, amount_used, unit.
 - Para "a gosto" (ou "à gosto", "q.b."), use a unidade "a gosto" e amount_used = 0.
 - Para "pitada" e "gotas", informe a quantidade quando presente no texto (ex.: 2 gotas, 1 pitada); se não houver, use amount_used = 0.
+- Quando unit for "unidade" (ex.: 2 tomates, 1 cebola), estime "grams_per_unit" com o peso médio em gramas de uma unidade; caso contrário, use null.
 - Retorne APENAS o JSON, sem texto introdutório.`
 
 // ---------------------------------------------------------------------------
@@ -346,6 +357,7 @@ export async function parseRecipeAction(
         unit: ai.unit,
         match_type: "exact",
         macros: ai.macros,
+        grams_per_unit: ai.grams_per_unit,
         db_ingredient: exact,
       } satisfies MatchedIngredient
     }
@@ -356,6 +368,7 @@ export async function parseRecipeAction(
       unit: ai.unit,
       match_type: "unmatched",
       macros: ai.macros,
+      grams_per_unit: ai.grams_per_unit,
       suggestions: matches,
     } satisfies UnmatchedIngredient
   })
@@ -452,6 +465,7 @@ export async function saveSmartImport(
         .insert({
           name: ci.create_new.name,
           default_unit: defaultUnit,
+          grams_per_unit: ci.create_new.grams_per_unit ?? null,
           kcal_per_100g: macros.kcal_per_100g,
           protein_per_100g: macros.protein_per_100g,
           carbs_per_100g: macros.carbs_per_100g,

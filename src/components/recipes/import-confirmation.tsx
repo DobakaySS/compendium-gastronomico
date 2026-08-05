@@ -49,6 +49,7 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
       createNew: boolean
       newName: string
       newUnit: string
+      newGramsPerUnit: string
     }>
   >({})
 
@@ -84,6 +85,8 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
             newName: ing.ai_name,
             // Unidades qualitativas não podem ser a unidade padrão do ingrediente.
             newUnit: isQualitativeUnit(ing.unit) ? "g" : ing.unit,
+            newGramsPerUnit:
+              ing.grams_per_unit != null ? String(ing.grams_per_unit) : "",
           }
         }
       })
@@ -99,6 +102,7 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
         createNew: true,
         newName: fallbackName,
         newUnit: "g",
+        newGramsPerUnit: "",
       }
     )
   }
@@ -110,6 +114,7 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
       createNew: boolean
       newName: string
       newUnit: string
+      newGramsPerUnit: string
     }>
   ) => {
     setUnmatchedSelections((prev) => ({
@@ -145,6 +150,10 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
               name: sel.newName.trim(),
               default_unit: sel.newUnit || ing.unit,
               macros: ing.macros,
+              grams_per_unit:
+                sel.newGramsPerUnit.trim() !== ""
+                  ? Number(sel.newGramsPerUnit)
+                  : null,
             },
           })
         } else if (sel.selectedId && sel.selectedId !== CREATE_NEW_VALUE) {
@@ -375,6 +384,22 @@ export function ImportConfirmation({ open, onOpenChange, parsed }: Props) {
                             </option>
                           ))}
                         </select>
+
+                        {sel.newUnit === "unidade" && (
+                          <Input
+                            value={sel.newGramsPerUnit}
+                            onChange={(e) =>
+                              updateUnmatched(idx, {
+                                newGramsPerUnit: e.target.value,
+                              })
+                            }
+                            type="number"
+                            min={0.1}
+                            step="0.1"
+                            placeholder="g por unidade"
+                            className="h-7 w-36"
+                          />
+                        )}
                       </div>
                     ) : (
                       <div className="mt-2">

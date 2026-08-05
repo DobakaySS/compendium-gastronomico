@@ -12,6 +12,7 @@ export type ViewerIngredient = {
   name: string
   unit: string
   amount_used: number
+  grams_per_unit: number | null
   kcal_per_100g: number | null
   protein_per_100g: number | null
   carbs_per_100g: number | null
@@ -30,6 +31,7 @@ export type MacroTotals = {
   totalCost: number
   costPerServing: number
   currency: string
+  missingUnitWeight: string[]
 }
 
 export type PantryLine = {
@@ -79,6 +81,21 @@ export function calcRatio(servings: number, baseServings: number): number {
   return servings / baseServings
 }
 
+// Converte a quantidade usada (na unidade da receita) para gramas, base para
+// o cálculo de macros. "unidade" usa a média de gramas por unidade do
+// ingrediente; sem essa média, o ingrediente não contribui macros (0g) e é
+// reportado em missingUnitWeight.
+export function convertToGrams(
+  amount: number,
+  unit: string,
+  gramsPerUnit: number | null
+): number {
+  if (unit === "unidade") {
+    return gramsPerUnit != null ? amount * gramsPerUnit : 0
+  }
+  return amount
+}
+
 // Per ingredient: amount_used * Ratio
 export function calcScaledAmount(amountUsed: number, ratio: number): number {
   return amountUsed * ratio
@@ -114,6 +131,7 @@ export function calcMacroTotals(
   let carbs = 0
   let fat = 0
   let totalCost = 0
+  const missingUnitWeight: string[] = []
   const currency =
     ingredients.find((ing) => ing.currency)?.currency ?? "BRL"
 
@@ -122,10 +140,14 @@ export function calcMacroTotals(
     // Unidades qualitativas ("a gosto", "pitada", "gotas") não entram nos
     // macros. Custos ainda são calculados quando há quantidade.
     if (!isQualitativeUnit(ing.unit)) {
-      kcal += calcIngredientMacro(scaled, ing.kcal_per_100g)
-      protein += calcIngredientMacro(scaled, ing.protein_per_100g)
-      carbs += calcIngredientMacro(scaled, ing.carbs_per_100g)
-      fat += calcIngredientMacro(scaled, ing.fat_per_100g)
+      const grams = convertToGrams(scaled, ing.unit, ing.grams_per_unit)
+      if (ing.unit === "unidade" && ing.grams_per_unit == null) {
+        missingUnitWeight.push(ing.name)
+      }
+      kcal += calcIngredientMacro(grams, ing.kcal_per_100g)
+      protein += calcIngredientMacro(grams, ing.protein_per_100g)
+      carbs += calcIngredientMacro(grams, ing.carbs_per_100g)
+      fat += calcIngredientMacro(grams, ing.fat_per_100g)
     }
     totalCost += calcIngredientCost(scaled, ing.price, ing.reference_amount)
   }
@@ -138,6 +160,7 @@ export function calcMacroTotals(
     totalCost: round(totalCost, 2),
     costPerServing: round(servings > 0 ? totalCost / servings : 0, 2),
     currency,
+    missingUnitWeight: Array.from(new Set(missingUnitWeight)),
   }
 }
 

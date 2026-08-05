@@ -15,6 +15,7 @@ export type Ingredient = {
   id: string
   name: string
   default_unit: string | null
+  grams_per_unit: number | null
   kcal_per_100g: number | null
   protein_per_100g: number | null
   carbs_per_100g: number | null
@@ -119,10 +120,23 @@ export const IngredientSchema = z
       .refine((u) => !isQualitativeUnit(u), {
         message: "Use uma unidade mensurável como padrão.",
       }),
+    grams_per_unit: optionalMacro,
     kcal_per_100g: optionalMacro,
     protein_per_100g: optionalMacro,
     carbs_per_100g: optionalMacro,
     fat_per_100g: optionalMacro,
+  })
+  .superRefine((val, ctx) => {
+    if (
+      val.default_unit === "unidade" &&
+      (val.grams_per_unit == null || val.grams_per_unit <= 0)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["grams_per_unit"],
+        message: "Informe a média de g por unidade.",
+      })
+    }
   })
 
 export const InstructionStepSchema = z.object({

@@ -88,12 +88,12 @@ export default async function RecipeDetailPage({
        version_name,
        created_at,
        recipe_authors(author_id, authors(name)),
-       recipe_ingredients(
-         ingredient_id,
-         amount_used,
-         unit,
-         ingredients(id, name, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g)
-       )`
+         recipe_ingredients(
+           ingredient_id,
+           amount_used,
+           unit,
+           ingredients(id, name, grams_per_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g)
+         )`
     )
     .eq("id", id)
     .maybeSingle()
@@ -147,11 +147,11 @@ export default async function RecipeDetailPage({
   const { data: ingredientRows, error: ingredientError } = await supabase
     .from("recipe_ingredients")
     .select(
-      `recipe_id,
-       ingredient_id,
-       amount_used,
-       unit,
-       ingredients(id, name, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g)`
+       `recipe_id,
+        ingredient_id,
+        amount_used,
+        unit,
+        ingredients(id, name, grams_per_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g)`
     )
     .in("recipe_id", versionIds)
 
@@ -168,6 +168,7 @@ export default async function RecipeDetailPage({
       name: normalizeIngredientName(ing),
       unit: r.unit ?? "",
       amount_used: Number(r.amount_used ?? 0),
+      grams_per_unit: ing?.grams_per_unit != null ? Number(ing.grams_per_unit) : null,
       kcal_per_100g: ing?.kcal_per_100g != null ? Number(ing.kcal_per_100g) : null,
       protein_per_100g: ing?.protein_per_100g != null ? Number(ing.protein_per_100g) : null,
       carbs_per_100g: ing?.carbs_per_100g != null ? Number(ing.carbs_per_100g) : null,
@@ -191,7 +192,7 @@ export default async function RecipeDetailPage({
     )
   )
 
-  const pricesByCity = new Map<City, Map<string, Omit<ViewerIngredient, "name" | "unit" | "amount_used" | "kcal_per_100g" | "protein_per_100g" | "carbs_per_100g" | "fat_per_100g">>>()
+  const pricesByCity = new Map<City, Map<string, Omit<ViewerIngredient, "name" | "unit" | "amount_used" | "grams_per_unit" | "kcal_per_100g" | "protein_per_100g" | "carbs_per_100g" | "fat_per_100g">>>()
   CITIES.forEach((c) => pricesByCity.set(c, new Map()))
 
   if (allIngredientIds.length > 0) {
@@ -229,7 +230,7 @@ export default async function RecipeDetailPage({
   }
 
   const serializeMap = (
-    map: Map<string, Omit<ViewerIngredient, "name" | "unit" | "amount_used" | "kcal_per_100g" | "protein_per_100g" | "carbs_per_100g" | "fat_per_100g">>
+    map: Map<string, Omit<ViewerIngredient, "name" | "unit" | "amount_used" | "grams_per_unit" | "kcal_per_100g" | "protein_per_100g" | "carbs_per_100g" | "fat_per_100g">>
   ) => Object.fromEntries(map.entries())
 
   const pricesByCitySerialized = Object.fromEntries(
@@ -237,7 +238,7 @@ export default async function RecipeDetailPage({
       city,
       serializeMap(map),
     ])
-  ) as Record<City, Record<string, Omit<ViewerIngredient, "name" | "unit" | "amount_used" | "kcal_per_100g" | "protein_per_100g" | "carbs_per_100g" | "fat_per_100g">>>
+  ) as Record<City, Record<string, Omit<ViewerIngredient, "name" | "unit" | "amount_used" | "grams_per_unit" | "kcal_per_100g" | "protein_per_100g" | "carbs_per_100g" | "fat_per_100g">>>
 
   const ingredientsByVersionSerialized = Array.from(
     ingredientsByVersion.entries()

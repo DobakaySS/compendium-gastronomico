@@ -8,6 +8,7 @@ type IngredientRow = {
   id: string
   name: string
   default_unit: string | null
+  grams_per_unit: number | null
   kcal_per_100g: number | null
   protein_per_100g: number | null
   carbs_per_100g: number | null
@@ -15,6 +16,10 @@ type IngredientRow = {
 }
 
 function formatMacro(value: number | null): string {
+  return value != null ? String(value) : "—"
+}
+
+function formatGramsPerUnit(value: number | null): string {
   return value != null ? String(value) : "—"
 }
 
@@ -30,7 +35,7 @@ export default async function IngredientsPage() {
   const { data: ingredients, error } = await supabase
     .from("ingredients")
     .select(
-      "id, name, default_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g"
+      "id, name, default_unit, grams_per_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g"
     )
     .order("name")
 
@@ -91,10 +96,20 @@ export default async function IngredientsPage() {
                 className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 px-5 py-4"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-zinc-100">
+                  <p className="truncate text-base font-medium text-zinc-100">
                     {ing.name}
+                    {ing.default_unit === "unidade" &&
+                      (ing.grams_per_unit == null ? (
+                        <span className="ml-2 inline-block rounded-full border border-amber-900/60 bg-amber-950/30 px-2 py-0.5 text-[0.6rem] tracking-wide text-amber-300/90">
+                          sem g/unidade
+                        </span>
+                      ) : (
+                        <span className="ml-2 inline-block rounded-full border border-zinc-800 bg-zinc-900/60 px-2 py-0.5 text-[0.6rem] tracking-wide text-zinc-400">
+                          ≈{formatGramsPerUnit(ing.grams_per_unit)}g/unidade
+                        </span>
+                      ))}
                   </p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
+                  <p className="mt-0.5 text-sm text-zinc-500">
                     {ing.default_unit ?? "sem unidade padrão"} ·{" "}
                     {formatMacro(ing.kcal_per_100g)} kcal · P{" "}
                     {formatMacro(ing.protein_per_100g)}g · C{" "}

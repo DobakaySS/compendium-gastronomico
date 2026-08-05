@@ -13,18 +13,19 @@ export type FormState<T = unknown> =
     }
   | null
 
-const MACRO_KEYS: readonly string[] = [
+const NUMERIC_KEYS: readonly string[] = [
   "kcal_per_100g",
   "protein_per_100g",
   "carbs_per_100g",
   "fat_per_100g",
+  "grams_per_unit",
 ]
 
-// FormData sempre entrega strings. Coerce os macros para number|null.
+// FormData sempre entrega strings. Coerce os macros e grams_per_unit para number|null.
 function normalizeIngredientFormData(formData: FormData) {
   const raw: Record<string, unknown> = {}
   for (const [key, value] of formData.entries()) {
-    if (MACRO_KEYS.includes(key)) {
+    if (NUMERIC_KEYS.includes(key)) {
       const s = String(value).trim()
       raw[key] = s === "" ? null : Number(s)
     } else {
@@ -46,17 +47,18 @@ export async function createIngredient(
     return { errors: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, default_unit, ...macros } = parsed.data
+  const { name, default_unit, ...rest } = parsed.data
 
   const { error } = await auth.supabase
     .from("ingredients")
     .insert({
       name,
       default_unit,
-      kcal_per_100g: macros.kcal_per_100g,
-      protein_per_100g: macros.protein_per_100g,
-      carbs_per_100g: macros.carbs_per_100g,
-      fat_per_100g: macros.fat_per_100g,
+      grams_per_unit: rest.grams_per_unit,
+      kcal_per_100g: rest.kcal_per_100g,
+      protein_per_100g: rest.protein_per_100g,
+      carbs_per_100g: rest.carbs_per_100g,
+      fat_per_100g: rest.fat_per_100g,
     })
     .select("id")
     .single()
@@ -81,17 +83,18 @@ export async function createIngredientQuick(
     return { errors: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, default_unit, ...macros } = parsed.data
+  const { name, default_unit, ...rest } = parsed.data
 
   const { data, error } = await auth.supabase
     .from("ingredients")
     .insert({
       name,
       default_unit,
-      kcal_per_100g: macros.kcal_per_100g,
-      protein_per_100g: macros.protein_per_100g,
-      carbs_per_100g: macros.carbs_per_100g,
-      fat_per_100g: macros.fat_per_100g,
+      grams_per_unit: rest.grams_per_unit,
+      kcal_per_100g: rest.kcal_per_100g,
+      protein_per_100g: rest.protein_per_100g,
+      carbs_per_100g: rest.carbs_per_100g,
+      fat_per_100g: rest.fat_per_100g,
     })
     .select("id")
     .single()
@@ -121,17 +124,18 @@ export async function updateIngredient(
     return { errors: parsed.error.flatten().fieldErrors }
   }
 
-  const { name, default_unit, ...macros } = parsed.data
+  const { name, default_unit, ...rest } = parsed.data
 
   const { error } = await auth.supabase
     .from("ingredients")
     .update({
       name,
       default_unit,
-      kcal_per_100g: macros.kcal_per_100g,
-      protein_per_100g: macros.protein_per_100g,
-      carbs_per_100g: macros.carbs_per_100g,
-      fat_per_100g: macros.fat_per_100g,
+      grams_per_unit: rest.grams_per_unit,
+      kcal_per_100g: rest.kcal_per_100g,
+      protein_per_100g: rest.protein_per_100g,
+      carbs_per_100g: rest.carbs_per_100g,
+      fat_per_100g: rest.fat_per_100g,
     })
     .eq("id", id)
 

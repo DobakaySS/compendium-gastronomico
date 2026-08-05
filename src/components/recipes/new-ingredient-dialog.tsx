@@ -45,6 +45,7 @@ export function NewIngredientDialog({ open, onOpenChange, onCreated }: Props) {
 
   const [name, setName] = useState("")
   const [defaultUnit, setDefaultUnit] = useState<string>(UNITS[0])
+  const [gramsPerUnit, setGramsPerUnit] = useState("")
   const [macros, setMacros] = useState<Record<string, string>>({
     kcal_per_100g: "",
     protein_per_100g: "",
@@ -58,6 +59,7 @@ export function NewIngredientDialog({ open, onOpenChange, onCreated }: Props) {
     const t = window.setTimeout(() => {
       setName("")
       setDefaultUnit(UNITS[0])
+      setGramsPerUnit("")
       setMacros({
         kcal_per_100g: "",
         protein_per_100g: "",
@@ -121,6 +123,34 @@ export function NewIngredientDialog({ open, onOpenChange, onCreated }: Props) {
               </Select>
             </FieldContent>
           </Field>
+
+          {defaultUnit === "unidade" && (
+            <Field orientation="vertical">
+              <FieldLabel htmlFor="new-ing-grams-per-unit">
+                Média de g por unidade
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="new-ing-grams-per-unit"
+                  name="grams_per_unit"
+                  type="number"
+                  min={0.1}
+                  step="0.1"
+                  inputMode="decimal"
+                  placeholder="ex.: 120"
+                  value={gramsPerUnit}
+                  onChange={(e) => setGramsPerUnit(e.target.value)}
+                  required
+                />
+                <FieldError
+                  errors={[{ message: state?.errors?.grams_per_unit?.[0] }]}
+                />
+                <p className="text-xs text-zinc-500">
+                  Peso médio de uma unidade, para calcular os macros em receitas.
+                </p>
+              </FieldContent>
+            </Field>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             {(

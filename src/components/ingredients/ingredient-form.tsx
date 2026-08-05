@@ -47,6 +47,7 @@ type IngredientFormProps = {
 const EMPTY_DEFAULTS: IngredientFormValues = {
   name: "",
   default_unit: "g",
+  grams_per_unit: null,
   kcal_per_100g: null,
   protein_per_100g: null,
   carbs_per_100g: null,
@@ -79,6 +80,7 @@ export function IngredientForm({
   })
 
   const name = useWatch({ control, name: "name" })
+  const defaultUnit = useWatch({ control, name: "default_unit" })
   const [fillingMacros, startMacrosTransition] = useTransition()
 
   const ingredientId = defaultValues?.id
@@ -109,6 +111,7 @@ export function IngredientForm({
       if (ingredientId) fd.set("id", ingredientId)
       fd.set("name", values.name)
       fd.set("default_unit", values.default_unit)
+      fd.set("grams_per_unit", String(values.grams_per_unit ?? ""))
       fd.set("kcal_per_100g", String(values.kcal_per_100g ?? ""))
       fd.set("protein_per_100g", String(values.protein_per_100g ?? ""))
       fd.set("carbs_per_100g", String(values.carbs_per_100g ?? ""))
@@ -173,6 +176,36 @@ export function IngredientForm({
               <FieldError errors={[{ message: errors.default_unit?.message }]} />
             </FieldContent>
           </Field>
+
+          {defaultUnit === "unidade" && (
+            <Field orientation="vertical">
+              <FieldLabel htmlFor="grams_per_unit">
+                Média de g por unidade
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="grams_per_unit"
+                  type="number"
+                  min={0.1}
+                  step="0.1"
+                  inputMode="decimal"
+                  placeholder="ex.: 120"
+                  {...register("grams_per_unit", {
+                    setValueAs: (v) =>
+                      v === "" || v === null || v === undefined
+                        ? null
+                        : Number(v),
+                  })}
+                />
+                <FieldError
+                  errors={[{ message: errors.grams_per_unit?.message }]}
+                />
+                <p className="text-xs text-zinc-500">
+                  Peso médio de uma unidade, para calcular os macros em receitas.
+                </p>
+              </FieldContent>
+            </Field>
+          )}
 
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">Macros por 100g</p>

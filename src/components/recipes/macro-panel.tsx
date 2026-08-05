@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import Link from "next/link"
 import {
   calcMacroTotals,
   formatAmount,
@@ -66,6 +67,21 @@ export function MacroPanel({
             </div>
           ))}
         </div>
+
+        {totals.missingUnitWeight.length > 0 && (
+          <div className="mt-3 rounded-xl border border-amber-900/60 bg-amber-950/30 px-4 py-3 text-xs leading-relaxed text-amber-200/90">
+            <p className="font-medium text-amber-200">
+              Macros incompletos — falta a média de g por unidade de:{" "}
+              {totals.missingUnitWeight.join(", ")}.
+            </p>
+            <Link
+              href="/ingredients"
+              className="mt-1 inline-block tracking-[0.15em] uppercase text-amber-300/80 underline underline-offset-4 transition-colors hover:text-amber-200"
+            >
+              Corrigir no catálogo
+            </Link>
+          </div>
+        )}
 
         {hasPrices && (
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2">

@@ -22,6 +22,7 @@ type PriceData = Omit<
   | "name"
   | "unit"
   | "amount_used"
+  | "grams_per_unit"
   | "kcal_per_100g"
   | "protein_per_100g"
   | "carbs_per_100g"
