@@ -53,9 +53,31 @@ export type RecipeLog = {
   id: string
   recipe_id: string
   author_id: string
+  user_id: string
   note: string | null
   created_at: string
 }
+
+export const RecipeLogSchema = z.object({
+  recipe_id: z.string().uuid("Receita inválida."),
+  author_id: z.string().uuid("Selecione um autor."),
+  note: z
+    .string()
+    .min(1, "Escreva uma nota.")
+    .max(2000, "Nota muito longa."),
+})
+
+export type RecipeLogFormValues = z.infer<typeof RecipeLogSchema>
+
+export const EditRecipeLogSchema = z.object({
+  id: z.string().uuid("Registro inválido."),
+  note: z
+    .string()
+    .min(1, "Escreva uma nota.")
+    .max(2000, "Nota muito longa."),
+})
+
+export type EditRecipeLogFormValues = z.infer<typeof EditRecipeLogSchema>
 
 export type RecipeIngredient = {
   recipe_id: string

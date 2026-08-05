@@ -3,6 +3,7 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { Separator } from "@/components/ui/separator"
 import { RecipeViewer } from "@/components/recipes/recipe-viewer"
+import type { TimelineLog } from "@/components/recipes/recipe-timeline"
 import { userRole, canWrite } from "@/lib/roles"
 import { CITIES, type City } from "@/lib/cities"
 import type { ViewerIngredient } from "@/lib/calculations"
@@ -183,6 +184,56 @@ export default async function RecipeDetailPage({
     ingredientsByVersion.set(r.recipe_id, list)
   }
 
+  // --- 2b. Logs do caderno de experimentos por família ------------------
+  const logsByVersion: Record<string, TimelineLog[]> = {}
+
+  if (versionIds.length > 0) {
+    const { data: logRowsRaw } = await supabase
+      .from("recipe_logs")
+      .select("id, recipe_id, user_id, note, created_at, authors(name)")
+      .in("recipe_id", versionIds)
+      .order("created_at", { ascending: false })
+
+    for (const row of logRowsRaw ?? []) {
+      const raw = row as {
+        id: string
+        recipe_id: string
+        user_id: string
+        note: string | null
+        created_at: string
+        authors: { name: string } | { name: string }[] | null
+      }
+      const authorName = raw.authors
+        ? Array.isArray(raw.authors)
+          ? (raw.authors[0] as { name?: string } | undefined)?.name ?? ""
+          : (raw.authors as { name?: string }).name ?? ""
+        : ""
+      const entry: TimelineLog = {
+        id: raw.id,
+        user_id: raw.user_id,
+        note: raw.note,
+        created_at: raw.created_at,
+        author_name: authorName,
+      }
+      const list = logsByVersion[raw.recipe_id] ?? []
+      list.push(entry)
+      logsByVersion[raw.recipe_id] = list
+    }
+  }
+
+  // --- 2c. Autores para o selector do form de log -----------------------
+  const { data: allAuthors } = await supabase
+    .from("authors")
+    .select("id, name")
+    .order("name")
+
+  const authorOptions = (allAuthors ?? []).map(
+    (a: { id: string; name: string }) => ({
+      id: a.id,
+      name: a.name,
+    })
+  )
+
   // --- 3. Preços por cidade (mais recentes) -------------------------------
   const allIngredientIds = Array.from(
     new Set(
@@ -323,6 +374,10 @@ export default async function RecipeDetailPage({
           versions={versions}
           ingredientsByVersion={ingredientsByVersionSerialized}
           pricesByCity={pricesByCitySerialized}
+          logsByVersion={logsByVersion}
+          authors={authorOptions}
+          canWrite={writer}
+          currentUserId={user?.id ?? null}
         />
       </main>
   )

@@ -7,6 +7,9 @@ import { useCity } from "@/components/providers/city-provider"
 import { ServingSlider } from "@/components/recipes/serving-slider"
 import { MacroPanel } from "@/components/recipes/macro-panel"
 import { ShoppingListDialog } from "@/components/recipes/shopping-list-dialog"
+import { RecipeLogbook } from "@/components/recipes/recipe-logbook"
+import type { TimelineLog } from "@/components/recipes/recipe-timeline"
+import type { AuthorOption } from "@/components/recipes/log-entry-form"
 import {
   calcRatio,
   calcScaledAmount,
@@ -39,6 +42,10 @@ type RecipeViewerProps = {
   versions: RecipeVersion[]
   ingredientsByVersion: Record<string, ViewerIngredient[]>
   pricesByCity: PricesByCity
+  logsByVersion: Record<string, TimelineLog[]>
+  authors: AuthorOption[]
+  canWrite: boolean
+  currentUserId: string | null
 }
 
 function instructionText(raw: string | { text: string }): string {
@@ -51,6 +58,10 @@ export function RecipeViewer({
   versions,
   ingredientsByVersion,
   pricesByCity,
+  logsByVersion,
+  authors,
+  canWrite,
+  currentUserId,
 }: RecipeViewerProps) {
   const { city } = useCity()
 
@@ -220,6 +231,18 @@ export function RecipeViewer({
           missingPriceNames={missingPriceNames}
           incompleteTotal={incompleteTotal}
           onServingsChange={setMacroServings}
+        />
+      )}
+
+      {/* Caderno de experimentos da versão ativa */}
+      <Separator className="bg-zinc-800" />
+      {activeVersion && (
+        <RecipeLogbook
+          recipeId={activeVersion.id}
+          logs={logsByVersion[activeVersion.id] ?? []}
+          authors={authors}
+          canWrite={canWrite}
+          currentUserId={currentUserId}
         />
       )}
     </div>
