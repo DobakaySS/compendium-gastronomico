@@ -17,8 +17,9 @@ import {
   formatIngredientAmount,
   type ViewerIngredient,
 } from "@/lib/calculations"
-import type { RecipeVersion } from "@/lib/schema"
+import type { RecipeVersion, Tag } from "@/lib/schema"
 import type { City } from "@/lib/cities"
+import { TagBadge } from "@/components/tags/tag-badge"
 
 type PriceData = Omit<
   ViewerIngredient,
@@ -26,6 +27,7 @@ type PriceData = Omit<
   | "unit"
   | "amount_used"
   | "grams_per_unit"
+  | "price_matters"
   | "kcal_per_100g"
   | "protein_per_100g"
   | "carbs_per_100g"
@@ -43,6 +45,7 @@ type RecipeViewerProps = {
   ingredientsByVersion: Record<string, ViewerIngredient[]>
   pricesByCity: PricesByCity
   logsByVersion: Record<string, TimelineLog[]>
+  tagsByVersion?: Record<string, Tag[]>
   authors: AuthorOption[]
   canWrite: boolean
   currentUserId: string | null
@@ -59,6 +62,7 @@ export function RecipeViewer({
   ingredientsByVersion,
   pricesByCity,
   logsByVersion,
+  tagsByVersion = {},
   authors,
   canWrite,
   currentUserId,
@@ -107,7 +111,7 @@ export function RecipeViewer({
 
   const { missingPriceNames, incompleteTotal } = React.useMemo(() => {
     const names = ingredients
-      .filter((ing) => ing.price == null)
+      .filter((ing) => ing.price == null && ing.price_matters)
       .map((ing) => ing.name)
     return {
       missingPriceNames: names,
@@ -116,6 +120,7 @@ export function RecipeViewer({
   }, [ingredients])
 
   const hasPrices = ingredients.some((ing) => ing.price != null)
+  const showPriceSection = ingredients.some((ing) => ing.price_matters)
   const hasVersions = versions.length > 1
 
   const scaledIngredients = React.useMemo(() => {
@@ -143,6 +148,17 @@ export function RecipeViewer({
               ))}
             </TabsList>
           </Tabs>
+        </section>
+      )}
+
+      {/* Tags da versão ativa */}
+      {activeVersion && tagsByVersion[activeVersion.id]?.length > 0 && (
+        <section>
+          <div className="flex flex-wrap gap-1.5">
+            {tagsByVersion[activeVersion.id].map((tag) => (
+              <TagBadge key={tag.id} tag={tag} />
+            ))}
+          </div>
         </section>
       )}
 
@@ -227,6 +243,7 @@ export function RecipeViewer({
           servings={macroServings}
           baseServings={baseServings}
           hasPrices={hasPrices}
+          showPriceSection={showPriceSection}
           city={city}
           missingPriceNames={missingPriceNames}
           incompleteTotal={incompleteTotal}

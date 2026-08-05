@@ -18,6 +18,7 @@ export type ParsedRecipe = {
   effort_level: number
   instructions: Array<{ text: string }>
   techniques: string[]
+  tags: string[]
 }
 
 export type AiMacros = {
@@ -207,6 +208,7 @@ Siga estritamente este schema:
   "effort_level": number (nível de esforço de 1=muito fácil a 5=muito difícil),
   "instructions": [{"text": "string"}],
   "techniques": ["string"] (técnicas culinárias, ex: "refogar", "assar", "emulsionar", "redução"),
+  "tags": ["string"] (categorias da receita, ex: "proteico", "prato principal", "sobremesa", "lanche", "acompanhamento", "vegano", "low carb", "molho", "rápido", "café da manhã"; use de 1 a 3 tags, sempre em minúsculas),
   "ingredients": [
     {
       "name": "string (nome do ingrediente)",
@@ -297,6 +299,7 @@ async function callGemini(rawText: string): Promise<{
     effort_level: clamp(toInt(obj.effort_level, 2), 1, 5),
     instructions: normalizeInstructions(obj.instructions),
     techniques: normalizeStringArray(obj.techniques),
+    tags: normalizeStringArray(obj.tags),
   }
 
   if (!recipe.title || recipe.instructions.length === 0) {
@@ -526,6 +529,46 @@ export async function saveSmartImport(
       throw new Error(
         `Erro ao vincular ingredientes: ${linkErr.message}`
       )
+    }
+  }
+
+  // Tags: resolve por nome (case-insensitive), cria as que faltam e vincula.
+  const tagNames = recipe.tags.map((t) => t.trim()).filter(Boolean)
+  if (tagNames.length > 0) {
+    const { data: allTags } = await supabase
+      .from("tags")
+      .select("id, name")
+
+    const existingMap = new Map(
+      (allTags ?? []).map((t) => [t.name.toLowerCase(), t.id as string])
+    )
+
+    const tagIds: string[] = []
+    for (const name of tagNames) {
+      const key = name.toLowerCase()
+      if (existingMap.has(key)) {
+        tagIds.push(existingMap.get(key)!)
+        continue
+      }
+      const { data: createdTag, error: tagErr } = await supabase
+        .from("tags")
+        .insert({ name, color: "#71717a" })
+        .select("id")
+        .single()
+      if (tagErr) {
+        await supabase.from("recipes").delete().eq("id", recipeId)
+        throw new Error(`Erro ao criar tag "${name}": ${tagErr.message}`)
+      }
+      tagIds.push((createdTag as { id: string }).id)
+      existingMap.set(key, (createdTag as { id: string }).id)
+    }
+
+    const { error: tagLinkErr } = await supabase.from("recipe_tags").insert(
+      tagIds.map((tag_id) => ({ recipe_id: recipeId, tag_id }))
+    )
+    if (tagLinkErr) {
+      await supabase.from("recipes").delete().eq("id", recipeId)
+      throw new Error(`Erro ao vincular tags: ${tagLinkErr.message}`)
     }
   }
 

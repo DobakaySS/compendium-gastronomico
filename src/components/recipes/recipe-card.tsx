@@ -1,16 +1,18 @@
 import Link from "next/link"
-import type { Recipe } from "@/lib/schema"
+import type { Recipe, Tag } from "@/lib/schema"
 import { cn } from "@/lib/utils"
+import { TagBadge } from "@/components/tags/tag-badge"
 
 type RecipeCardProps = {
   recipe: Pick<
     Recipe,
     "id" | "title" | "image_url" | "base_servings" | "prep_time_minutes"
   >
+  tags?: Tag[]
   size?: "sm" | "md"
 }
 
-export function RecipeCard({ recipe, size = "md" }: RecipeCardProps) {
+export function RecipeCard({ recipe, tags = [], size = "md" }: RecipeCardProps) {
   const hasImage = Boolean(recipe.image_url)
 
   return (
@@ -47,6 +49,18 @@ export function RecipeCard({ recipe, size = "md" }: RecipeCardProps) {
           </span>
           <span>{recipe.base_servings ?? "—"} porções</span>
         </div>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {tags.slice(0, 3).map((tag) => (
+              <TagBadge key={tag.id} tag={tag} className="h-4 text-[0.55rem]" />
+            ))}
+            {tags.length > 3 && (
+              <span className="text-[0.55rem] text-zinc-400">
+                +{tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </Link>
   )

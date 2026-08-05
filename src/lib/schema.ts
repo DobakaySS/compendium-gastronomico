@@ -21,6 +21,7 @@ export type Ingredient = {
   protein_per_100g: number | null
   carbs_per_100g: number | null
   fat_per_100g: number | null
+  price_matters: boolean
 }
 
 export type Recipe = {
@@ -36,6 +37,12 @@ export type Recipe = {
   parent_recipe_id: string | null
   version_name: string | null
   public_token: string | null
+}
+
+export type Tag = {
+  id: string
+  name: string
+  color: string
 }
 
 export type IngredientPrice = {
@@ -148,6 +155,7 @@ export const IngredientSchema = z
     protein_per_100g: optionalMacro,
     carbs_per_100g: optionalMacro,
     fat_per_100g: optionalMacro,
+    price_matters: z.boolean(),
   })
   .superRefine((val, ctx) => {
     if (
@@ -198,6 +206,7 @@ export const RecipeSchema = z.object({
     .array(IngredientLineSchema)
     .min(1, "Adicione ao menos um ingrediente."),
   author_ids: z.array(z.string()),
+  tag_ids: z.array(z.string()),
 })
 
 export type AuthorFormValues = z.infer<typeof AuthorSchema>

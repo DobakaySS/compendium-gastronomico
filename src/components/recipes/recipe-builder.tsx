@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/field"
 import { Combobox, ComboboxMulti } from "@/components/ui/combobox"
 import { NewIngredientDialog } from "@/components/recipes/new-ingredient-dialog"
+import { TagPicker } from "@/components/tags/tag-picker"
 import { RecipeImagePicker } from "@/components/recipes/recipe-image-picker"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
@@ -64,6 +65,7 @@ const DEFAULT_VALUES: RecipeFormValues = {
   instructions: [],
   ingredients: [],
   author_ids: [],
+  tag_ids: [],
 }
 
 export function RecipeBuilder({
@@ -267,6 +269,7 @@ export function RecipeBuilder({
         fd.append("unit", line.unit)
       })
       values.author_ids.forEach((author_id) => fd.append("author_id", author_id))
+      values.tag_ids.forEach((tag_id) => fd.append("tag_id", tag_id))
       startTransition(() => {
         formAction(fd)
       })
@@ -665,6 +668,21 @@ export function RecipeBuilder({
                 placeholder="Selecione os autores (opcional)"
                 emptyText="Nenhum autor. Cadastre em /authors/new"
                 loading={loadingAuthors}
+              />
+            </FieldContent>
+          </Field>
+
+          <Separator />
+
+          {/* Tags */}
+          <Field orientation="vertical">
+            <FieldLabel>Tags</FieldLabel>
+            <FieldContent>
+              <TagPicker
+                values={getValues("tag_ids")}
+                onValueChange={(ids) =>
+                  setValue("tag_ids", ids, { shouldValidate: true })
+                }
               />
             </FieldContent>
           </Field>

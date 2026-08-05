@@ -28,6 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Field, FieldLabel, FieldContent, FieldError } from "@/components/ui/field"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Controller } from "react-hook-form"
 import { MEASURABLE_UNITS } from "@/lib/units"
 import { SparklesIcon } from "lucide-react"
@@ -52,6 +53,7 @@ const EMPTY_DEFAULTS: IngredientFormValues = {
   protein_per_100g: null,
   carbs_per_100g: null,
   fat_per_100g: null,
+  price_matters: true,
 }
 
 export function IngredientForm({
@@ -116,6 +118,7 @@ export function IngredientForm({
       fd.set("protein_per_100g", String(values.protein_per_100g ?? ""))
       fd.set("carbs_per_100g", String(values.carbs_per_100g ?? ""))
       fd.set("fat_per_100g", String(values.fat_per_100g ?? ""))
+      fd.set("price_matters", values.price_matters ? "on" : "")
       startTransition(() => {
         formAction(fd)
       })
@@ -252,6 +255,36 @@ export function IngredientForm({
               </Field>
             ))}
           </div>
+
+          <Field orientation="vertical">
+            <FieldLabel>Preço por cidade</FieldLabel>
+            <FieldContent>
+              <Controller
+                control={control}
+                name="price_matters"
+                render={({ field }) => (
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(next) => field.onChange(next === true)}
+                      className="mt-0.5"
+                      aria-label="Acompanhar preço por cidade"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">
+                        Acompanhar preço por cidade
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Desative para ingredientes cujo preço não importa
+                        (ex.: sal, água). Eles deixam de exigir um preço
+                        registrado e não geram avisos.
+                      </p>
+                    </div>
+                  </label>
+                )}
+              />
+            </FieldContent>
+          </Field>
 
           {state?.message && (
             <p className="text-sm text-destructive">{state.message}</p>

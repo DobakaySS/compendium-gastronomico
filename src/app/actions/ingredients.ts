@@ -22,16 +22,21 @@ const NUMERIC_KEYS: readonly string[] = [
 ]
 
 // FormData sempre entrega strings. Coerce os macros e grams_per_unit para number|null.
+// Checkbox de price_matters vem como "on"/"true" quando marcado; ausente = true (padrão).
 function normalizeIngredientFormData(formData: FormData) {
   const raw: Record<string, unknown> = {}
+  let priceMatters = true
   for (const [key, value] of formData.entries()) {
-    if (NUMERIC_KEYS.includes(key)) {
+    if (key === "price_matters") {
+      priceMatters = value === "on" || value === "true"
+    } else if (NUMERIC_KEYS.includes(key)) {
       const s = String(value).trim()
       raw[key] = s === "" ? null : Number(s)
     } else {
       raw[key] = String(value)
     }
   }
+  raw.price_matters = priceMatters
   return raw
 }
 
@@ -59,6 +64,7 @@ export async function createIngredient(
       protein_per_100g: rest.protein_per_100g,
       carbs_per_100g: rest.carbs_per_100g,
       fat_per_100g: rest.fat_per_100g,
+      price_matters: rest.price_matters,
     })
     .select("id")
     .single()
@@ -95,6 +101,7 @@ export async function createIngredientQuick(
       protein_per_100g: rest.protein_per_100g,
       carbs_per_100g: rest.carbs_per_100g,
       fat_per_100g: rest.fat_per_100g,
+      price_matters: rest.price_matters,
     })
     .select("id")
     .single()
@@ -136,6 +143,7 @@ export async function updateIngredient(
       protein_per_100g: rest.protein_per_100g,
       carbs_per_100g: rest.carbs_per_100g,
       fat_per_100g: rest.fat_per_100g,
+      price_matters: rest.price_matters,
     })
     .eq("id", id)
 
@@ -145,4 +153,24 @@ export async function updateIngredient(
 
   revalidatePath("/", "layout")
   redirect("/ingredients")
+}
+
+export async function toggleIngredientPriceMatters(
+  ingredientId: string,
+  priceMatters: boolean
+): Promise<{ ok: boolean; message?: string }> {
+  const auth = await requireRole(["admin", "colaborador"])
+  if (!auth.ok) return { ok: false, message: auth.message }
+
+  const { error } = await auth.supabase
+    .from("ingredients")
+    .update({ price_matters: priceMatters })
+    .eq("id", ingredientId)
+
+  if (error) {
+    return { ok: false, message: error.message }
+  }
+
+  revalidatePath("/ingredients")
+  return { ok: true }
 }

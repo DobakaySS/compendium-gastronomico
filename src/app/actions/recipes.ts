@@ -29,6 +29,7 @@ type RecipePayload = {
     unit: string
   }>
   author_ids: string[]
+  tag_ids: string[]
 }
 
 type RecipeParse = ReturnType<typeof RecipeSchema.safeParse>
@@ -77,6 +78,10 @@ function parseRecipeFormData(formData: FormData): RecipeParse {
     .getAll("author_id")
     .map((v) => String(v))
     .filter(Boolean)
+  const tag_ids = formData
+    .getAll("tag_id")
+    .map((v) => String(v))
+    .filter(Boolean)
 
   const ingredients = ingredient_ids.map((ingredient_id, index) => ({
     ingredient_id,
@@ -93,6 +98,7 @@ function parseRecipeFormData(formData: FormData): RecipeParse {
     instructions,
     ingredients,
     author_ids,
+    tag_ids,
   })
 }
 
@@ -145,6 +151,20 @@ async function linkAuthors(
   }))
   const { error } = await supabase.from("recipe_authors").insert(rows)
   return error ? "Erro ao salvar autores da receita." : null
+}
+
+async function linkTags(
+  supabase: SupabaseClient,
+  recipeId: string,
+  data: RecipePayload
+): Promise<string | null> {
+  if (data.tag_ids.length === 0) return null
+  const rows = data.tag_ids.map((tag_id) => ({
+    recipe_id: recipeId,
+    tag_id,
+  }))
+  const { error } = await supabase.from("recipe_tags").insert(rows)
+  return error ? "Erro ao salvar tags da receita." : null
 }
 
 // ---------------------------------------------------------------------------
@@ -212,6 +232,12 @@ async function createRecipeCore(
     return { message: authorError }
   }
 
+  const tagError = await linkTags(supabase, recipeId, data)
+  if (tagError) {
+    await supabase.from("recipes").delete().eq("id", recipeId)
+    return { message: tagError }
+  }
+
   revalidatePath("/", "layout")
   redirect("/dashboard")
 }
@@ -252,6 +278,15 @@ async function updateRecipeCore(
 
   const authorError = await linkAuthors(supabase, id, data)
   if (authorError) return { message: authorError }
+
+  const { error: delRt } = await supabase
+    .from("recipe_tags")
+    .delete()
+    .eq("recipe_id", id)
+  if (delRt) return { message: "Erro ao atualizar tags da receita." }
+
+  const tagError = await linkTags(supabase, id, data)
+  if (tagError) return { message: tagError }
 
   revalidatePath("/", "layout")
   redirect(`/r/${id}`)
@@ -329,6 +364,12 @@ async function createVersionCore(
   if (authorError) {
     await supabase.from("recipes").delete().eq("id", newId)
     return { message: authorError }
+  }
+
+  const tagError = await linkTags(supabase, newId, data)
+  if (tagError) {
+    await supabase.from("recipes").delete().eq("id", newId)
+    return { message: tagError }
   }
 
   revalidatePath("/", "layout")

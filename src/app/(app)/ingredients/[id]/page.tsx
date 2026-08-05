@@ -17,6 +17,7 @@ type IngredientRow = {
   protein_per_100g: number | null
   carbs_per_100g: number | null
   fat_per_100g: number | null
+  price_matters: boolean
 }
 
 type PriceHistoryRow = {
@@ -62,7 +63,7 @@ export default async function IngredientDetailPage({
   const { data: ingredient, error } = await supabase
     .from("ingredients")
     .select(
-      "id, name, default_unit, grams_per_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g"
+      "id, name, default_unit, grams_per_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, price_matters"
     )
     .eq("id", id)
     .maybeSingle()
@@ -158,7 +159,7 @@ export default async function IngredientDetailPage({
 
       <Separator className="bg-zinc-800" />
 
-      {writer && (
+      {writer && row.price_matters && (
         <section className="mt-10">
           <h2 className="mb-4 text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
             Registrar novo preço
@@ -169,43 +170,56 @@ export default async function IngredientDetailPage({
         </section>
       )}
 
-      <section className="mt-10">
-        <h2 className="mb-4 text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
-          Histórico de preços
-        </h2>
+      {row.price_matters ? (
+        <section className="mt-10">
+          <h2 className="mb-4 text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
+            Histórico de preços
+          </h2>
 
-        {prices.length === 0 ? (
+          {prices.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-zinc-800 px-6 py-12 text-center">
+              <p className="text-sm text-zinc-500">
+                Nenhum preço registrado para este ingrediente.
+              </p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {prices.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 px-5 py-4"
+                >
+                  <div className="min-w-0">
+                    <p className="flex items-baseline gap-2 text-base font-medium text-zinc-100">
+                      {formatPrice(p.price)}
+                      <span className="text-xs text-zinc-500">
+                        / {p.reference_amount}{p.reference_unit}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-sm text-zinc-500">
+                      {p.city} · {formatDate(p.recorded_on)}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-zinc-800 px-3 py-1.5 text-[0.65rem] tracking-[0.2em] uppercase text-zinc-400">
+                    {p.city}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : (
+        <section className="mt-10">
+          <h2 className="mb-4 text-[0.7rem] tracking-[0.35em] uppercase text-zinc-500">
+            Preços
+          </h2>
           <div className="rounded-2xl border border-dashed border-zinc-800 px-6 py-12 text-center">
             <p className="text-sm text-zinc-500">
-              Nenhum preço registrado para este ingrediente.
+              O preço deste ingrediente não é acompanhado.
             </p>
           </div>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {prices.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 px-5 py-4"
-              >
-                <div className="min-w-0">
-                  <p className="flex items-baseline gap-2 text-base font-medium text-zinc-100">
-                    {formatPrice(p.price)}
-                    <span className="text-xs text-zinc-500">
-                      / {p.reference_amount}{p.reference_unit}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-sm text-zinc-500">
-                    {p.city} · {formatDate(p.recorded_on)}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full border border-zinc-800 px-3 py-1.5 text-[0.65rem] tracking-[0.2em] uppercase text-zinc-400">
-                  {p.city}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        </section>
+      )}
     </main>
   )
 }

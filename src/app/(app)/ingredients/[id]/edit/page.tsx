@@ -15,6 +15,7 @@ type IngredientRow = {
   protein_per_100g: number | null
   carbs_per_100g: number | null
   fat_per_100g: number | null
+  price_matters: boolean
 }
 
 export default async function EditIngredientPage({
@@ -35,7 +36,7 @@ export default async function EditIngredientPage({
   const { data: ingredient, error } = await supabase
     .from("ingredients")
     .select(
-      "id, name, default_unit, grams_per_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g"
+      "id, name, default_unit, grams_per_unit, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, price_matters"
     )
     .eq("id", id)
     .maybeSingle()
@@ -54,6 +55,7 @@ export default async function EditIngredientPage({
     protein_per_100g: row.protein_per_100g != null ? Number(row.protein_per_100g) : null,
     carbs_per_100g: row.carbs_per_100g != null ? Number(row.carbs_per_100g) : null,
     fat_per_100g: row.fat_per_100g != null ? Number(row.fat_per_100g) : null,
+    price_matters: row.price_matters,
   }
 
   return (

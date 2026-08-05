@@ -23,6 +23,7 @@ type RecipeRow = {
     unit: string | null
   }>
   recipe_authors: Array<{ author_id: string }>
+  recipe_tags: Array<{ tag_id: string }>
 }
 
 export default async function EditRecipePage({
@@ -53,7 +54,8 @@ export default async function EditRecipePage({
        parent_recipe_id,
        version_name,
        recipe_ingredients(ingredient_id, amount_used, unit),
-       recipe_authors(author_id)`
+       recipe_authors(author_id),
+       recipe_tags(tag_id)`
     )
     .eq("id", id)
     .maybeSingle()
@@ -79,6 +81,7 @@ export default async function EditRecipePage({
       unit: ri.unit ?? "g",
     })),
     author_ids: (row.recipe_authors ?? []).map((a) => a.author_id),
+    tag_ids: (row.recipe_tags ?? []).map((t) => t.tag_id),
   }
 
   // --- Família de versões + sugestão do próximo nome automático -----------

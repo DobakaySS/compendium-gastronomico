@@ -57,7 +57,15 @@ export default async function Home() {
 
   const { data: recipes, error } = await supabase
     .from("recipes")
-    .select("id, title, image_url, base_servings, prep_time_minutes, created_at")
+    .select(
+      `id,
+       title,
+       image_url,
+       base_servings,
+       prep_time_minutes,
+       created_at,
+       recipe_tags(tag_id, tags(id, name, color))`
+    )
     .is("parent_recipe_id", null)
     .order("created_at", { ascending: false })
 
@@ -120,9 +128,34 @@ export default async function Home() {
               Recentes
             </p>
             <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4">
-              {recipes.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} />
-              ))}
+              {recipes.map((recipe) => {
+                const recipeRow = recipe as {
+                  recipe_tags?: Array<{
+                    tags?:
+                      | { id: string; name: string; color: string }
+                      | Array<{ id: string; name: string; color: string }>
+                      | null
+                  }>
+                }
+                const tags = (recipeRow.recipe_tags ?? [])
+                  .map((rt) =>
+                    Array.isArray(rt.tags)
+                      ? (rt.tags[0] as
+                          | { id: string; name: string; color: string }
+                          | undefined)
+                      : (rt.tags as
+                          | { id: string; name: string; color: string }
+                          | null
+                          | undefined)
+                  )
+                  .filter(
+                    (t): t is { id: string; name: string; color: string } =>
+                      Boolean(t?.id && t.name && t.color)
+                  )
+                return (
+                  <RecipeCard key={recipe.id} recipe={recipe} tags={tags} />
+                )
+              })}
             </div>
           </>
         )}

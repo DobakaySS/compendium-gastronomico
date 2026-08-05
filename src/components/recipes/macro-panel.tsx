@@ -16,6 +16,7 @@ type MacroPanelProps = {
   servings: number
   baseServings: number
   hasPrices: boolean
+  showPriceSection: boolean
   city: string
   missingPriceNames: string[]
   incompleteTotal: boolean
@@ -34,6 +35,7 @@ export function MacroPanel({
   servings,
   baseServings,
   hasPrices,
+  showPriceSection,
   city,
   missingPriceNames,
   incompleteTotal,
@@ -90,7 +92,7 @@ export function MacroPanel({
           </div>
         )}
 
-        {hasPrices && (
+        {showPriceSection && hasPrices && (
           <>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
@@ -137,7 +139,7 @@ export function MacroPanel({
           </>
         )}
 
-        {!hasPrices && (
+        {showPriceSection && !hasPrices && (
           <div className="mt-3 flex items-center gap-2">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1">
               <MapPinIcon className="size-3 text-zinc-500" />
