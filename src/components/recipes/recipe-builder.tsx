@@ -36,8 +36,9 @@ import {
 import { Combobox, ComboboxMulti } from "@/components/ui/combobox"
 import { NewIngredientDialog } from "@/components/recipes/new-ingredient-dialog"
 import { Separator } from "@/components/ui/separator"
+import { toast } from "sonner"
 import { RECIPE_UNITS, isQualitativeUnit } from "@/lib/units"
-import { PlusIcon, Trash2Icon } from "lucide-react"
+import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
 const UNITS = RECIPE_UNITS
 
@@ -84,6 +85,11 @@ export function RecipeBuilder({
   const [pendingAmount, setPendingAmount] = useState("")
   const [pendingUnit, setPendingUnit] = useState<string>(UNITS[0])
   const [ingredientDialogOpen, setIngredientDialogOpen] = useState(false)
+
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editIngredientId, setEditIngredientId] = useState("")
+  const [editAmount, setEditAmount] = useState("")
+  const [editUnit, setEditUnit] = useState("")
 
   const {
     register,
@@ -181,6 +187,44 @@ export function RecipeBuilder({
   const onPendingUnitChange = (value: string) => {
     setPendingUnit(value)
     if (isQualitativeUnit(value)) setPendingAmount("")
+  }
+
+  const startEdit = (index: number) => {
+    const line = ingredientsArray.fields[index]
+    if (!line) return
+    setEditingIndex(index)
+    setEditIngredientId(line.ingredient_id)
+    setEditAmount(isQualitativeUnit(line.unit) ? "" : String(line.amount_used))
+    setEditUnit(line.unit)
+  }
+
+  const onEditUnitChange = (value: string) => {
+    setEditUnit(value)
+    if (isQualitativeUnit(value)) setEditAmount("")
+  }
+
+  const cancelEdit = () => {
+    setEditingIndex(null)
+    setEditIngredientId("")
+    setEditAmount("")
+    setEditUnit("")
+  }
+
+  const saveEdit = (index: number) => {
+    if (!editIngredientId) {
+      toast.error("Escolha um ingrediente.")
+      return
+    }
+    if (!isQualitativeUnit(editUnit) && (!editAmount || Number(editAmount) <= 0)) {
+      toast.error("Quantidade deve ser maior que zero.")
+      return
+    }
+    ingredientsArray.update(index, {
+      ingredient_id: editIngredientId,
+      amount_used: isQualitativeUnit(editUnit) ? 0 : Number(editAmount),
+      unit: editUnit,
+    })
+    cancelEdit()
   }
 
   const handleIngredientCreated = (id: string) => {
@@ -421,30 +465,121 @@ export function RecipeBuilder({
 
             {ingredientsArray.fields.length > 0 && (
               <div className="flex flex-col gap-2">
-                {ingredientsArray.fields.map((field, index) => (
-                  <div
-                    key={field.id}
-                    className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                  >
-                    <span className="flex-1">
-                      {ingredientOptions.find((o) => o.value === field.ingredient_id)?.label ?? "Ingrediente"}
-                      <span className="ml-2 text-muted-foreground">
-                        {isQualitativeUnit(field.unit)
-                          ? field.unit
-                          : `${field.amount_used} ${field.unit}`}
-                      </span>
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Remover ingrediente"
-                      onClick={() => ingredientsArray.remove(index)}
+                {ingredientsArray.fields.map((field, index) =>
+                  editingIndex === index ? (
+                    <div
+                      key={field.id}
+                      className="rounded-lg border border-zinc-800 bg-zinc-900/40 px-3 py-3"
                     >
-                      <Trash2Icon />
-                    </Button>
-                  </div>
-                ))}
+                      <div className="flex flex-col gap-3">
+                        <Field orientation="vertical">
+                          <FieldLabel>Ingrediente</FieldLabel>
+                          <FieldContent>
+                            <Combobox
+                              options={ingredientOptions}
+                              value={editIngredientId}
+                              onValueChange={setEditIngredientId}
+                              placeholder="Buscar ingrediente..."
+                              emptyText="Nenhum ingrediente encontrado"
+                              loading={loadingIngredients}
+                            />
+                          </FieldContent>
+                        </Field>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field orientation="vertical">
+                            <FieldLabel>Quantidade</FieldLabel>
+                            <FieldContent>
+                              <Input
+                                type="number"
+                                min={0}
+                                step="0.1"
+                                inputMode="decimal"
+                                disabled={isQualitativeUnit(editUnit)}
+                                placeholder={isQualitativeUnit(editUnit) ? "Sem quantidade" : "0"}
+                                value={editAmount}
+                                onChange={(e) => setEditAmount(e.target.value)}
+                              />
+                              {isQualitativeUnit(editUnit) && (
+                                <p className="mt-1 text-[0.65rem] text-zinc-500">
+                                  Sem quantidade — não entra nos macros.
+                                </p>
+                              )}
+                            </FieldContent>
+                          </Field>
+                          <Field orientation="vertical">
+                            <FieldLabel>Unidade</FieldLabel>
+                            <FieldContent>
+                              <Select
+                                value={editUnit}
+                                onValueChange={(v) => onEditUnitChange(v ?? "")}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="w-full">
+                                  {UNITS.map((unit) => (
+                                    <SelectItem key={unit} value={unit}>
+                                      {unit}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FieldContent>
+                          </Field>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => saveEdit(index)}
+                          >
+                            Salvar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={cancelEdit}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      key={field.id}
+                      className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <span className="flex-1">
+                        {ingredientOptions.find((o) => o.value === field.ingredient_id)?.label ?? "Ingrediente"}
+                        <span className="ml-2 text-muted-foreground">
+                          {isQualitativeUnit(field.unit)
+                            ? field.unit
+                            : `${field.amount_used} ${field.unit}`}
+                        </span>
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Editar ingrediente"
+                        onClick={() => startEdit(index)}
+                      >
+                        <PencilIcon />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Remover ingrediente"
+                        onClick={() => ingredientsArray.remove(index)}
+                      >
+                        <Trash2Icon />
+                      </Button>
+                    </div>
+                  )
+                )}
               </div>
             )}
             {errors.ingredients?.message && (
