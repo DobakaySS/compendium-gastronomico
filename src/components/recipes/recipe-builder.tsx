@@ -37,7 +37,8 @@ import { Combobox, ComboboxMulti } from "@/components/ui/combobox"
 import { NewIngredientDialog } from "@/components/recipes/new-ingredient-dialog"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { RECIPE_UNITS, isQualitativeUnit } from "@/lib/units"
+import { RECIPE_UNITS, isAmountlessUnit, isQualitativeUnit } from "@/lib/units"
+import { formatIngredientAmount } from "@/lib/calculations"
 import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
 const UNITS = RECIPE_UNITS
@@ -162,9 +163,10 @@ export function RecipeBuilder({
   )
 
   const pendingUnitIsQualitative = isQualitativeUnit(pendingUnit)
+  const pendingUnitIsAmountless = isAmountlessUnit(pendingUnit)
 
   const addIngredientToList = () => {
-    const amount = pendingUnitIsQualitative
+    const amount = pendingUnitIsAmountless
       ? 0
       : Number(pendingAmount) || 0
     const project = {
@@ -186,7 +188,7 @@ export function RecipeBuilder({
 
   const onPendingUnitChange = (value: string) => {
     setPendingUnit(value)
-    if (isQualitativeUnit(value)) setPendingAmount("")
+    if (isAmountlessUnit(value)) setPendingAmount("")
   }
 
   const startEdit = (index: number) => {
@@ -194,13 +196,13 @@ export function RecipeBuilder({
     if (!line) return
     setEditingIndex(index)
     setEditIngredientId(line.ingredient_id)
-    setEditAmount(isQualitativeUnit(line.unit) ? "" : String(line.amount_used))
+    setEditAmount(line.amount_used > 0 ? String(line.amount_used) : "")
     setEditUnit(line.unit)
   }
 
   const onEditUnitChange = (value: string) => {
     setEditUnit(value)
-    if (isQualitativeUnit(value)) setEditAmount("")
+    if (isAmountlessUnit(value)) setEditAmount("")
   }
 
   const cancelEdit = () => {
@@ -221,7 +223,7 @@ export function RecipeBuilder({
     }
     ingredientsArray.update(index, {
       ingredient_id: editIngredientId,
-      amount_used: isQualitativeUnit(editUnit) ? 0 : Number(editAmount),
+      amount_used: isAmountlessUnit(editUnit) ? 0 : Number(editAmount) || 0,
       unit: editUnit,
     })
     cancelEdit()
@@ -419,14 +421,19 @@ export function RecipeBuilder({
                       min={0}
                       step="0.1"
                       inputMode="decimal"
-                      placeholder={pendingUnitIsQualitative ? "Sem quantidade" : "0"}
-                      disabled={pendingUnitIsQualitative}
+                      placeholder={pendingUnitIsAmountless ? "Sem quantidade" : "0"}
+                      disabled={pendingUnitIsAmountless}
                       value={pendingAmount}
                       onChange={(e) => setPendingAmount(e.target.value)}
                     />
-                    {pendingUnitIsQualitative && (
+                    {pendingUnitIsAmountless && (
                       <p className="mt-1 text-[0.65rem] text-zinc-500">
                         Sem quantidade — não entra nos macros.
+                      </p>
+                    )}
+                    {pendingUnitIsQualitative && !pendingUnitIsAmountless && (
+                      <p className="mt-1 text-[0.65rem] text-zinc-500">
+                        Quantidade informativa — não entra nos macros.
                       </p>
                     )}
                   </FieldContent>
@@ -494,14 +501,19 @@ export function RecipeBuilder({
                                 min={0}
                                 step="0.1"
                                 inputMode="decimal"
-                                disabled={isQualitativeUnit(editUnit)}
-                                placeholder={isQualitativeUnit(editUnit) ? "Sem quantidade" : "0"}
+                                disabled={isAmountlessUnit(editUnit)}
+                                placeholder={isAmountlessUnit(editUnit) ? "Sem quantidade" : "0"}
                                 value={editAmount}
                                 onChange={(e) => setEditAmount(e.target.value)}
                               />
-                              {isQualitativeUnit(editUnit) && (
+                              {isAmountlessUnit(editUnit) && (
                                 <p className="mt-1 text-[0.65rem] text-zinc-500">
                                   Sem quantidade — não entra nos macros.
+                                </p>
+                              )}
+                              {isQualitativeUnit(editUnit) && !isAmountlessUnit(editUnit) && (
+                                <p className="mt-1 text-[0.65rem] text-zinc-500">
+                                  Quantidade informativa — não entra nos macros.
                                 </p>
                               )}
                             </FieldContent>
@@ -554,9 +566,7 @@ export function RecipeBuilder({
                       <span className="flex-1">
                         {ingredientOptions.find((o) => o.value === field.ingredient_id)?.label ?? "Ingrediente"}
                         <span className="ml-2 text-muted-foreground">
-                          {isQualitativeUnit(field.unit)
-                            ? field.unit
-                            : `${field.amount_used} ${field.unit}`}
+                          {formatIngredientAmount(field.amount_used, field.unit)}
                         </span>
                       </span>
                       <Button

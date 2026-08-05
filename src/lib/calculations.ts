@@ -5,7 +5,7 @@
 // do slider, retornando os totais escalados.
 // ---------------------------------------------------------------------------
 
-import { isQualitativeUnit } from "@/lib/units"
+import { isAmountlessUnit, isQualitativeUnit } from "@/lib/units"
 
 export type ViewerIngredient = {
   id: string
@@ -66,10 +66,10 @@ export function formatAmount(value: number): string {
   }).format(round(value))
 }
 
-// Exibe a quantidade de um ingrediente. Unidades qualitativas ("a gosto",
-// "pitada", "gotas") mostram apenas a unidade, sem número.
+// Exibe a quantidade de um ingrediente. "a gosto" mostra apenas a unidade;
+// as demais (incluindo "pitada" e "gotas") mostram a quantidade quando houver.
 export function formatIngredientAmount(amount: number, unit: string): string {
-  if (isQualitativeUnit(unit)) return unit
+  if (isAmountlessUnit(unit)) return unit
   return `${formatAmount(amount)} ${unit}`
 }
 
@@ -118,13 +118,15 @@ export function calcMacroTotals(
     ingredients.find((ing) => ing.currency)?.currency ?? "BRL"
 
   for (const ing of ingredients) {
-    // Ingredientes "a gosto"/"pitada"/"gotas" não entram nos macros e custos.
-    if (isQualitativeUnit(ing.unit)) continue
     const scaled = calcScaledAmount(ing.amount_used, ratio)
-    kcal += calcIngredientMacro(scaled, ing.kcal_per_100g)
-    protein += calcIngredientMacro(scaled, ing.protein_per_100g)
-    carbs += calcIngredientMacro(scaled, ing.carbs_per_100g)
-    fat += calcIngredientMacro(scaled, ing.fat_per_100g)
+    // Unidades qualitativas ("a gosto", "pitada", "gotas") não entram nos
+    // macros. Custos ainda são calculados quando há quantidade.
+    if (!isQualitativeUnit(ing.unit)) {
+      kcal += calcIngredientMacro(scaled, ing.kcal_per_100g)
+      protein += calcIngredientMacro(scaled, ing.protein_per_100g)
+      carbs += calcIngredientMacro(scaled, ing.carbs_per_100g)
+      fat += calcIngredientMacro(scaled, ing.fat_per_100g)
+    }
     totalCost += calcIngredientCost(scaled, ing.price, ing.reference_amount)
   }
 
@@ -149,7 +151,7 @@ export function calcPantryLines(
   const ratio = calcRatio(servings, baseServings)
 
   return ingredients
-    .filter((ing) => !isQualitativeUnit(ing.unit))
+    .filter((ing) => !isAmountlessUnit(ing.unit))
     .map((ing) => {
       const required = calcScaledAmount(ing.amount_used, ratio)
       const inStock = inStockByIngredientId[ing.id] ?? 0

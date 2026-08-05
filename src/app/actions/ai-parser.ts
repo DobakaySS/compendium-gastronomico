@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requireRole } from "@/lib/crud"
-import { isQualitativeUnit } from "@/lib/units"
+import { isAmountlessUnit, isQualitativeUnit } from "@/lib/units"
 import type { Ingredient } from "@/lib/schema"
 
 // ---------------------------------------------------------------------------
@@ -170,11 +170,11 @@ function normalizeAiIngredients(value: unknown): AiIngredient[] {
       const unit = normalizeUnit(o.unit)
       const amount = toNum(o.amount_used, 0)
       if (!name) return null
-      // Unidades qualitativas não têm quantidade; aceita 0.
+      // Unidades qualitativas aceitam quantidade 0; "a gosto" é ignorada.
       if (amount <= 0 && !isQualitativeUnit(unit)) return null
       return {
         name,
-        amount_used: isQualitativeUnit(unit) ? 0 : amount,
+        amount_used: isAmountlessUnit(unit) ? 0 : amount,
         unit,
         macros: normalizeAiMacros(o.macros_per_100g),
       }
@@ -201,7 +201,7 @@ Siga estritamente este schema:
   "ingredients": [
     {
       "name": "string (nome do ingrediente)",
-      "amount_used": number (quantidade, ex: 500; use 0 quando a medida for qualitativa),
+      "amount_used": number (quantidade, ex: 500; use 0 para "a gosto"),
       "unit": "string (unidade: g, kg, ml, l, unidade, xícara, colher (sopa), colher (chá), a gosto, pitada, gotas)",
       "macros_per_100g": {
         "kcal_per_100g": number|null (kcal por 100g, null se desconhecer),
@@ -216,7 +216,8 @@ Siga estritamente este schema:
 Regras:
 - Instruções DEVEM ser array de objetos {"text": "..."}, um por passo.
 - Ingredientes DEVEM ser array de objetos com name, amount_used, unit.
-- Quando a quantidade no texto da receita for "a gosto", "pitada", "gotas" (ou "à gosto", "q.b."), use a unidade correspondente e amount_used = 0.
+- Para "a gosto" (ou "à gosto", "q.b."), use a unidade "a gosto" e amount_used = 0.
+- Para "pitada" e "gotas", informe a quantidade quando presente no texto (ex.: 2 gotas, 1 pitada); se não houver, use amount_used = 0.
 - Retorne APENAS o JSON, sem texto introdutório.`
 
 // ---------------------------------------------------------------------------
