@@ -35,6 +35,15 @@ export type MacroTotals = {
   missingUnitWeight: string[]
 }
 
+export type WeightEstimate = {
+  totalWeight: number
+  kcal: number
+  protein: number
+  carbs: number
+  fat: number
+  missingUnitWeight: string[]
+}
+
 export type PantryLine = {
   ingredient: ViewerIngredient
   required: number
@@ -162,6 +171,55 @@ export function calcMacroTotals(
     costPerServing: round(servings > 0 ? totalCost / servings : 0, 2),
     currency,
     missingUnitWeight: Array.from(new Set(missingUnitWeight)),
+  }
+}
+
+// Peso total estimado do prato pronto (soma do peso dos ingredientes brutos,
+// convertidos para gramas, na receita inteira). "unidade" sem média de g não
+// contribui peso e é reportada em missingUnitWeight.
+export function calcTotalPreparedWeight(ingredients: ViewerIngredient[]): {
+  weight: number
+  missingUnitWeight: string[]
+} {
+  let weight = 0
+  const missingUnitWeight: string[] = []
+
+  for (const ing of ingredients) {
+    if (isQualitativeUnit(ing.unit)) continue
+    if (ing.unit === "unidade" && ing.grams_per_unit == null) {
+      missingUnitWeight.push(ing.name)
+      continue
+    }
+    weight += convertToGrams(ing.amount_used, ing.unit, ing.grams_per_unit)
+  }
+
+  return {
+    weight: round(weight),
+    missingUnitWeight: Array.from(new Set(missingUnitWeight)),
+  }
+}
+
+// Regra de três dos macros pelo peso digitado do alimento pronto, sobre o
+// total da receita inteira. Retorna null quando não há peso mensurável.
+export function calcMacrosByWeight(
+  ingredients: ViewerIngredient[],
+  grams: number
+): WeightEstimate | null {
+  if (!grams || grams <= 0) return null
+  const { weight: totalWeight, missingUnitWeight } =
+    calcTotalPreparedWeight(ingredients)
+  if (totalWeight <= 0) return null
+
+  const totals = calcMacroTotals(ingredients, 1, 1)
+  const scale = grams / totalWeight
+
+  return {
+    totalWeight,
+    kcal: round(totals.kcal * scale),
+    protein: round(totals.protein * scale),
+    carbs: round(totals.carbs * scale),
+    fat: round(totals.fat * scale),
+    missingUnitWeight,
   }
 }
 

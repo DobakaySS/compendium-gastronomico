@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useActionState } from "react"
+import { useActionState, startTransition } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { createTagQuick, type FormState } from "@/app/actions/tags"
 import type { Tag } from "@/lib/schema"
@@ -56,6 +56,14 @@ export function TagPicker({ values, onValueChange, loading }: TagPickerProps) {
     onValueChange(next)
   }
 
+  const handleCreate = () => {
+    if (pending || !newName.trim()) return
+    const fd = new FormData()
+    fd.set("name", newName)
+    fd.set("color", newColor)
+    startTransition(() => formAction(fd))
+  }
+
   // Depois que a tag é criada, adiciona ao estado local e a seleciona.
   React.useEffect(() => {
     const id = state?.data?.id
@@ -105,14 +113,9 @@ export function TagPicker({ values, onValueChange, loading }: TagPickerProps) {
       )}
 
       {creating ? (
-        <form
-          action={formAction}
-          className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3"
-        >
+        <div className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
           <div className="flex gap-2">
-            <input type="hidden" name="color" value={newColor} />
             <Input
-              name="name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="Nome da nova tag"
@@ -120,8 +123,9 @@ export function TagPicker({ values, onValueChange, loading }: TagPickerProps) {
               autoFocus
             />
             <Button
-              type="submit"
+              type="button"
               size="sm"
+              onClick={handleCreate}
               disabled={pending || !newName.trim()}
             >
               {pending ? "Criando..." : "Criar"}
@@ -172,7 +176,7 @@ export function TagPicker({ values, onValueChange, loading }: TagPickerProps) {
               { message: state?.message },
             ]}
           />
-        </form>
+        </div>
       ) : (
         <Button
           type="button"

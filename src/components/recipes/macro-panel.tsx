@@ -10,6 +10,7 @@ import {
   type ViewerIngredient,
 } from "@/lib/calculations"
 import { ServingSlider } from "@/components/recipes/serving-slider"
+import { WeightEstimator } from "@/components/recipes/weight-estimator"
 
 type MacroPanelProps = {
   ingredients: ViewerIngredient[]
@@ -91,6 +92,8 @@ export function MacroPanel({
             </Link>
           </div>
         )}
+
+        <WeightEstimator ingredients={ingredients} />
 
         {showPriceSection && hasPrices && (
           <>
