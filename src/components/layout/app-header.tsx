@@ -47,7 +47,7 @@ export async function AppHeader({ showMenu = false }: { showMenu?: boolean }) {
           {user && (
             <Link
               href="/shopping"
-              className="hidden rounded-full px-3 py-1.5 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:text-zinc-100 md:inline-flex"
+              className="rounded-full px-3 py-1.5 text-[0.7rem] tracking-[0.2em] uppercase text-zinc-300 transition-colors hover:text-zinc-100 md:inline-flex"
             >
               Compras
             </Link>

@@ -20,6 +20,12 @@ export default async function AppLayout({
   const admin = canAdmin(role)
 
   const sections: SidebarSection[] = []
+  if (user) {
+    sections.push({
+      label: "Compras",
+      items: [{ href: "/shopping", label: "Lista de compras" }],
+    })
+  }
   if (writer) {
     sections.push({
       label: "Estúdio",
