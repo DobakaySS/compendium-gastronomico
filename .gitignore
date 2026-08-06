@@ -43,3 +43,6 @@ next-env.d.ts
 
 # session documentation (gitignored)
 /.session-notes/
+
+# database/storage backups (gitignored)
+/backups/
